@@ -28,10 +28,10 @@ while(user_input != 'END'):
         print(f"Odpowiedź agenta nr. 2 {interaction2.output_text}")
         print(f"Odpowiedź agenta nr. 3 {interaction3.output_text}")
         print("Wybierz, którą odpowiedź wolisz aby kontynuować rozmowę z tym agentem. Wpisz numer preferowanego agenta.")
-        preferred_agent = input()
-        while preferred_agent != 1 or 2 or 3:
+        preferred_agent = int(input())
+        while preferred_agent not in {1, 2, 3}:
             print("ERROR: wpisz numer preferowanego agenta (1, 2 lub 3).")
-            preferred_agent = input()
+            preferred_agent = int(input())
     else:
         if preferred_agent == 1:
             user_input = input()
