@@ -7,7 +7,7 @@ from    google                             import genai
 from    google.genai                       import types
 from    sklearn.metrics.pairwise           import cosine_similarity
 
-THRESHOLD = 0.6
+THRESHOLD = 0.3
 
 f = open("project_management_wiki.txt", "r")
 
@@ -45,7 +45,6 @@ for index in range(len(text.split("."))):
     sentence = sentence_collection.get(ids=[f"sentence_{index}"], include=["embeddings", "documents"])
     # For first sentence create a new chunk
     if index == 0:
-        print(sentence)
         chunk_sentences.append(sentence["documents"][0])
         chunk_collection.add(
             ids=[f"chunk_{chunk_index}"],
@@ -69,3 +68,5 @@ for index in range(len(text.split("."))):
                 ids=[f"chunk_{chunk_index}"],
                 documents=chunk_sentences,
             )
+
+print(chunk_collection.get())
