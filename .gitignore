@@ -2,3 +2,5 @@
 venv
 APIkey
 chromadb
+main/chromadb
+main/__pycache__
