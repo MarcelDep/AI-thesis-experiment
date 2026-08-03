@@ -65,3 +65,4 @@ def database_init():
                     )
     else:
         chunk_collection = db_client.get_or_create_collection(name='chunks')
+    return chunk_collection
