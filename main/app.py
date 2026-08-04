@@ -6,7 +6,7 @@ from    config                             import INTERACTION_ID, KEY_WORD_STATU
 
 st.title("Project Management Agent")
 
-print('START')
+print('================START================')
 
 client = genai.Client()
 
@@ -16,8 +16,8 @@ if "messages" not in st.session_state:
 if "id" not in st.session_state:
     st.session_state.id = None
 
-if "thought_or_action_key_word" not in st.session_state:
-    st.session_state.thought_or_action_key_word = False
+if "previous_response_type" not in st.session_state:
+    st.session_state.previous_response_type = None
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -28,36 +28,50 @@ def send_msg(role, text):
         st.markdown(text)
     st.session_state.messages.append({'role': role, "content": text})
 
-if prompt := st.chat_input("Type text here") or st.session_state.thought_or_action_key_word == True:    
-    print(prompt)
-    # If user send a prompt
-    if prompt != None and prompt != True:
+modelReponses = ['thought', 'action - current_date', 'action - user_location'] 
+
+if prompt := st.chat_input("Type text here") or st.session_state.previous_response_type in modelReponses:    
+    # If it's user fisrt message 
+    if st.session_state.previous_response_type == None:
         send_msg(role="user", text=prompt)
-
-        if st.session_state.id is None:
-            # generate_response(prompt, previous_id=None) funtion that returns interaction
-            interaction = agents.generate_response(prompt=f"USER TEXT: {prompt}", previous_response_id=None)
-            print(f"Model first response: {interaction.steps}")
-        else:
-            # generate_response(prompt, previous_id=st.session_state.id) funtion that returns interaction
-            interaction = agents.generate_response(prompt=f"USER TEXT: {prompt}", previous_response_id=st.session_state.id)
-            print(f"Model response: {interaction.steps}")
-    # If there isn't any response (model had thought or performed an action)
-    else:
-        # Think, use tool, or answer user quenstion - generate_response(prompt, previous_id=st.session_state.id) funtion that returns interaction
+        previous_response_id=None
+        #interaction = agents.generate_response(prompt=f"USER TEXT: {prompt}", previous_response_id=None)
+        #print(f"Model first response: {interaction.steps}")
+    # If model previous message has been a thought
+    elif st.session_state.previous_response_type == 'thought':
         prompt = "NOT USER RESPONSE: Continue response based on conversation history."
-        interaction = agents.generate_response(prompt=prompt, previous_response_id=st.session_state.id)
+        #interaction = agents.generate_response(prompt=f"USER TEXT: {prompt}", previous_response_id=st.session_state.id)
+        #print(f"Model response: {interaction.steps}")
+    # If model previous message has been an action - more specifically current_date tool call
+    elif st.session_state.previous_response_type == 'action - current_date':
+        date = agents.current_date()
+        prompt = f"current_date tool RESPONSE: {date}"
+        #interaction = agents.generate_response(prompt=prompt, previous_response_id=previous_response_id)
+    # If model previous message has been an action - more specifically user_location tool call
+    elif st.session_state.previous_response_type == 'action - user_location':
+        location = agents.user_location()
+        prompt = f"user_location tool RESPONSE: {location}"
+        #interaction = agents.generate_response(prompt=prompt, previous_response_id=previous_response_id)
+    else:
+        print(f"ERROR: {st.session_state.previous_response_type}")
 
-    # Check response_type(interaction.output_text) that returns thought_or_action_key_word, interaction.id, 
-    # Set steamlit state variables based on response_type funcion results 
-    result = agents.response_type(current_interaction=interaction, previous_response_id=st.session_state.id)
+    interaction = agents.generate_response(prompt=prompt, previous_response_id=st.session_state.id)
 
     print("PROMPT:", prompt)
     print("INTERACTION:", interaction.output_text)
 
-    if result[1] == False:
+    # Set steamlit state variables based on response_type funcion results 
+    model_response_type = agents.response_type(model_response=interaction.output_text)
+    
+    if model_response_type == 'answer':
         send_msg(role="assistant", text=interaction.output_text.replace("<answer>", '', 1))
+        st.session_state.previous_response_type = model_response_type
+    elif model_response_type in modelReponses:
+        st.session_state.previous_response_type = model_response_type
+    else:
+        print(f"ERROR - model will try again: {st.session_state.previous_response_type}")
+        send_msg(role="assistant", text=f'There was an unexpected ERROR: {st.session_state.previous_response_type}. Please try again.')
+        st.session_state.previous_response_type = "ERROR"
 
-    st.session_state.id = result[INTERACTION_ID]
-    st.session_state.thought_or_action_key_word = result[KEY_WORD_STATUS_ID] 
+    st.session_state.id = interaction.id
     st.rerun()
