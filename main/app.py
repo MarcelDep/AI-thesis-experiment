@@ -31,31 +31,35 @@ def send_msg(role, text):
 modelReponses = ['thought', 'action - current_date', 'action - user_location'] 
 
 if prompt := st.chat_input("Type text here") or st.session_state.previous_response_type in modelReponses:    
+    # If user has send a prompt
+    if prompt != None and prompt != True:
+        send_msg(role="user", text=prompt)
     # If it's user fisrt message 
     if st.session_state.previous_response_type == None:
-        send_msg(role="user", text=prompt)
         previous_response_id=None
-        #interaction = agents.generate_response(prompt=f"USER TEXT: {prompt}", previous_response_id=None)
-        #print(f"Model first response: {interaction.steps}")
     # If model previous message has been a thought
     elif st.session_state.previous_response_type == 'thought':
         prompt = "NOT USER RESPONSE: Continue response based on conversation history."
-        #interaction = agents.generate_response(prompt=f"USER TEXT: {prompt}", previous_response_id=st.session_state.id)
-        #print(f"Model response: {interaction.steps}")
     # If model previous message has been an action - more specifically current_date tool call
     elif st.session_state.previous_response_type == 'action - current_date':
         date = agents.current_date()
         prompt = f"current_date tool RESPONSE: {date}"
-        #interaction = agents.generate_response(prompt=prompt, previous_response_id=previous_response_id)
     # If model previous message has been an action - more specifically user_location tool call
     elif st.session_state.previous_response_type == 'action - user_location':
         location = agents.user_location()
         prompt = f"user_location tool RESPONSE: {location}"
-        #interaction = agents.generate_response(prompt=prompt, previous_response_id=previous_response_id)
     else:
         print(f"ERROR: {st.session_state.previous_response_type}")
 
-    interaction = agents.generate_response(prompt=prompt, previous_response_id=st.session_state.id)
+    # Orchestrator choose which agent should response
+    agent = agents.orchiestrator(prompt=prompt, previous_response_id=st.session_state.id)
+    print(agent)
+
+    if agent != 'interviewer_instruction' and agent != 'planer_instruction':
+        print(agent)
+        st.rerun()
+
+    interaction = agents.agent_response(prompt=prompt, previous_response_id=st.session_state.id, agent_type=agent)
 
     print("PROMPT:", prompt)
     print("INTERACTION:", interaction.output_text)

@@ -1,0 +1,31 @@
+Plan jest taki, żeby zrobić następujących agentów:
+    1. Agent przeprowadzający wywiad z użytkownikiem
+    2. Agent robiący plan na podstawie wywiadu
+    3. Agent analizujący kod użytkownika
+    4. Agent sprawdzający zgodność kodu z planem
+
+Komunikacja między agentami:
+    - Orkiestrator decyduje o tym jacy agenci podejmą dalsze dzialania
+    - Wiadomości są przekazywany w formacie json 
+    - W wiadomosci json nie sa przekazywane cale historie konwersacji ale pojedyncze najwazniejsze inforacje (decyzje o tym co jest wazne podejmuje agent)
+    - Orkiestrator to funkcja wywoływana w pętli - przekazuje się do niej agenta do którego zostanie przekazane zapytanie, treść zapytania, kontekst 
+
+Jak będzie wyglądał workflow:
+1. Użytkownik pisze prompta
+2. InterviewAgent ustala co musi zrobić/wywołuje narzędzia i daje odpowiedź (ReAct)
+3. InterviewAgent próbuje uzupełnić pola json - jeżeli to się uda to przechodzi do pkt. 4 jeżeli nie to wraca do 2
+4. Wypełniony json jest przekazywny do Orkiestratora który podejmuje decyzję który z 2 agentów (InterviewAgent i ProjectManagementAgent) ma dalej kontynuować zadanie
+5. powrót do pkt 1.
+
+zastanawiam się co zrobić z historią konwersacji - nie moge dac w kazdej odpowiedzi historii calej rozmowy bo to pochłonie za duzo tokenów. Z drugiej strony model musi miec informacje o przebiegu
+rozmowy, o pytaniach jakie uzytkownik zadal w poprzednich rozmowach, o tym jakie odpowiedzi poprzednio wygenerowal model itp - nie da rady przeciez przekazac wszystkich tych informacji w samym polu
+"extra_context"
+
+
+
+
+
+
+
+
+

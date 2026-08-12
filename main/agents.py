@@ -10,7 +10,7 @@ chunk_collection = rag.database_init()
 
 def word_detection(text, word):
     detected = f'{word}' in f'{text}'
-    print(f"Czy poprawnie wykryto {word}: {detected}")
+    print(f"Word {word}: {detected}")
     return detected
 
 def current_date():
@@ -23,16 +23,35 @@ def user_location():
     print(location)
     return location.latlng
 
-def generate_response(prompt, previous_response_id):
+def agent_response(prompt, previous_response_id, agent_type):
+    print(f"Agent {agent_type} response:")
     print(previous_response_id)
     interaction = client.interactions.create(
         model = config.llm["model"],
-        system_instruction = config.llm["system_instruction"],
+        system_instruction = config.llm[agent_type],
         previous_interaction_id = previous_response_id,
         input = f'RAG CONTEXT: {chunk_collection.query(query_texts=prompt, n_results=3)} | USER TEXT {prompt}',
         generation_config = config.llm["generation_config"],
     )
-    return interaction       
+    return interaction
+
+def orchiestrator(prompt, previous_response_id):
+    interaction = client.interactions.create(
+        model = config.llm["model"],
+        system_instruction = config.llm["orchestrator_instruction"],
+        previous_interaction_id = previous_response_id,
+        input = f'RAG CONTEXT: {chunk_collection.query(query_texts=prompt, n_results=3)} | USER TEXT {prompt}',
+        generation_config = config.llm["generation_config"],
+    )
+    model_response = interaction.output_text
+    if word_detection(model_response, 'planer_instruction') == True:
+        agent = 'planer_instruction'
+    elif word_detection(model_response, 'interviewer_instruction') == True:
+        agent = 'interviewer_instruction'
+    else:
+        agent = "ERROR: AGENT WASN'T CHOOSED!"
+
+    return agent
 
 def response_type(model_response):
     if word_detection(model_response, '<thought>') == True:
