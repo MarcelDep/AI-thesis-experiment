@@ -21,11 +21,13 @@ zastanawiam się co zrobić z historią konwersacji - nie moge dac w kazdej odpo
 rozmowy, o pytaniach jakie uzytkownik zadal w poprzednich rozmowach, o tym jakie odpowiedzi poprzednio wygenerowal model itp - nie da rady przeciez przekazac wszystkich tych informacji w samym polu
 "extra_context"
 
+Zadania:
+1. Wymuś odpowiadanie w formacie Pydantic - tak zeby dostac konkretne odpowiedzi
 
-
-
-
-
-
-
-
+Protokół komunikacji między agentami:
+agenci wiedzą o swoim istnieniu z system prompta, wiedzą o tym jakie maja dostępne pola (jakich informacji potrzebują oraz jakie mają udzielać odpowiedzi)
+1. prompt uzytkownika
+2. orchestrator przydziela agenta do odpowiedzi
+3. agent odpowiada ReAct frameworkiem i wypełnia json (jedno z pól w json to odpowiedź ReAct)
+4. json jest przekazywany orchestrator i wracamy do punktu 2 aż zostanie wygenerowana odpowiedź z <answer>
+5. wtedy odpowiedz jest wyswietlana uzytkownikowi i wracamy do 1

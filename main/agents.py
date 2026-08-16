@@ -23,25 +23,22 @@ def user_location():
     print(location)
     return location.latlng
 
-def agent_response(prompt, previous_response_id, agent_type):
+def agent_response(prompt, answer_history, current_ReAct_history, agent_type):
     print(f"Agent {agent_type} response:")
-    print(previous_response_id)
     interaction = client.interactions.create(
         model = config.llm["model"],
         system_instruction = config.llm[agent_type],
-        previous_interaction_id = previous_response_id,
-        input = f'RAG CONTEXT: {chunk_collection.query(query_texts=prompt, n_results=3)} | USER TEXT {prompt}',
-        generation_config = config.llm["generation_config"],
+        input = f'CONVERSATION HISTORY: {answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {current_ReAct_history} | RAG CONTEXT: {chunk_collection.query(query_texts=prompt, n_results=3)} | PROMPT: {prompt}',
+        generation_config = config.llm["agent_config"],
     )
     return interaction
 
-def orchiestrator(prompt, previous_response_id):
+def orchiestrator(prompt, answer_history, current_ReAct_history):
     interaction = client.interactions.create(
         model = config.llm["model"],
         system_instruction = config.llm["orchestrator_instruction"],
-        previous_interaction_id = previous_response_id,
-        input = f'RAG CONTEXT: {chunk_collection.query(query_texts=prompt, n_results=3)} | USER TEXT {prompt}',
-        generation_config = config.llm["generation_config"],
+        input = f'CONVERSATION HISTORY: {answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {current_ReAct_history}, PROMPT: {prompt}',
+        generation_config = config.llm["orchestrator_config"],
     )
     model_response = interaction.output_text
     if word_detection(model_response, 'planer_instruction') == True:
@@ -51,7 +48,7 @@ def orchiestrator(prompt, previous_response_id):
     else:
         agent = "ERROR: AGENT WASN'T CHOOSED!"
 
-    return agent
+    return agent, model_response
 
 def response_type(model_response):
     if word_detection(model_response, '<thought>') == True:
@@ -61,6 +58,8 @@ def response_type(model_response):
             response_type = 'action - current_date'
         elif word_detection(model_response, 'user_location') == True:
             response_type = 'action - user_location'
+        elif word_detection(model_response, 'switch_agent') == True:
+            response_type = 'action - switch_agent'
         else:
             response_type = 'Tool call related ERROR'
     elif word_detection(model_response, '<answer>') == True:
