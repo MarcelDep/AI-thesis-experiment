@@ -52,14 +52,14 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
     elif st.session_state.previous_response_type == 'thought':
         prompt = "NOT USER RESPONSE: Continue response based on conversation history."
     # If model previous message has been an action - more specifically current_date tool call
-    elif st.session_state.previous_response_type == 'action - current_date':
+    elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool = 'current_date':
         date = agents.current_date()
         prompt = f"current_date tool RESPONSE: {date}"
     # If model previous message has been an action - more specifically user_location tool call
-    elif st.session_state.previous_response_type == 'action - user_location':
+    elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool = 'user_location':
         location = agents.user_location()
         prompt = f"user_location tool RESPONSE: {location}"
-    elif st.session_state.previous_response_type == 'action - switch_agent':
+    elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool = 'switch_agent':
         prompt = "Current agent decided that different agent should responde right now. Review conversation and make a decision which agent should respond."
         orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process)
         st.session_state.current_agent = orchestrator_decision[0]
@@ -80,12 +80,12 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
     print("INTERACTION:", interaction.output_text)
 
     # Set steamlit state variables based on response_type funcion results 
-    model_response_type = agents.response_type(model_response=interaction.output_text)
+    model_response_type = interaction["type"]
     
     if model_response_type == 'answer':
-        send_msg(role="assistant", text=interaction.output_text.replace("<answer>", '', 1))
+        send_msg(role="assistant", text=interaction.output_text["content"])
         st.session_state.previous_response_type = model_response_type
-        st.session_state.answer_history.append(interaction.output_text.replace("<answer>", '', 1))
+        st.session_state.answer_history.append(interaction.output_text["content"])
     elif model_response_type in modelReponses:
         st.session_state.previous_response_type = model_response_type
     else:
