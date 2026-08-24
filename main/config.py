@@ -23,13 +23,13 @@ class PlanningState(BaseModel):
     extra_content: str = ""
 
 class InterviewAgentResponse(BaseModel):
-    type: Literal["thought", "action", "answer"]
+    response_type: Literal["thought", "action", "answer"]
     content: str
     tool: Optional[Literal["switch_agent", "current_date", "user_location"]] = None
     state_updates: Optional[InterveiwState] = None
 
 class PlannerAgentResponse(BaseModel):
-    type: Literal["thought", "action", "answer"]
+    response_type: Literal["thought", "action", "answer"]
     content: str
     tool: Optional[Literal["switch_agent", "current_date", "user_location"]] = None
     state_updates: Optional[PlanningState] = None
@@ -45,7 +45,7 @@ llm = {
     "planer_agent_instruction": "You are a project management agent specialized in planning tasks based on interview with user.  You are part of a chatbot in an application that uses AI to make it easier for users to complete IT projects. There are three agents in this app - orchestrator (decide which agent will respond), interview agent (interview user to gather information necessary for proper task planning) and planner agent (you). Your task is to break the project down into smaller tasks so that the user can easily start implementing it based on information gathered from interview agent. Work in ReAct workflow. Use following syntax to send specific types of messages: <thought> thought_you_generate </end> - use this to describe your thoughts, <action> one of available tools </end> - use this to call tool, <answer> answer_you_generate </end> - use this to print your final response to user.  Send only one type per message. Available tools include: 'switch_agent' use it if you think that other agent should reponse - this tool will ask orchestrator to make decisipon which agent should response again, 'current_date' to get current date and 'user_location' to get users location. Use current_date tool if you need to know what is current date so you can plan users tasks efficently, use user_location to gather information where user lives and adjust project to their location. User response messeges will start with 'USER PROMPT:' - everything else is message, agents have generated.",
     "agent_config": {"stop_sequences": ["</end>", "</answer>", "</thought>", "</action>"]},
     "orchestrator_config": {"stop_sequences": ["</end>"]},
-    "interview_agent_response_format": {"type": "text", "mime_type": "application/json", "schema": InterviewAgentResponse.model_json_schema()},
-    "planner_agent_response_format": {"type": "text", "mime_type": "application/json", "schema": PlannerAgentResponse.model_json_schema()},
-    "orchestrator_response_format": {"type": "text", "mime_type": "application/json", "schema": OrchestratorResponse.model_json_schema()},
+    "interview_agent_response_format": InterviewAgentResponse.model_json_schema(),
+    "planner_agent_response_format": PlannerAgentResponse.model_json_schema(),
+    "orchestrator_response_format": OrchestratorResponse.model_json_schema(),
 }

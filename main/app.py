@@ -1,4 +1,5 @@
 import  rag
+import  json
 import  agents
 import  streamlit                          as st
 from    google                             import genai
@@ -46,29 +47,28 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         st.session_state.current_thinking_process = []
         # Orchestrator choose which agent should response
         orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process)
-        st.session_state.current_agent = orchestrator_decision[0]
-        print(st.session_state.current_agent)
+        st.session_state.current_agent = orchestrator_decision["agent"]
     # If model previous message has been a thought
     elif st.session_state.previous_response_type == 'thought':
         prompt = "NOT USER RESPONSE: Continue response based on conversation history."
     # If model previous message has been an action - more specifically current_date tool call
-    elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool = 'current_date':
+    elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'current_date':
         date = agents.current_date()
         prompt = f"current_date tool RESPONSE: {date}"
     # If model previous message has been an action - more specifically user_location tool call
-    elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool = 'user_location':
+    elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'user_location':
         location = agents.user_location()
         prompt = f"user_location tool RESPONSE: {location}"
-    elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool = 'switch_agent':
+    elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'switch_agent':
         prompt = "Current agent decided that different agent should responde right now. Review conversation and make a decision which agent should respond."
         orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process)
         st.session_state.current_agent = orchestrator_decision[0]
-        prompt = f"Continue based on conversation history. Orchestration decision: {orchestrator_decision[1]}"
+        prompt = f"Continue based on conversation history. Orchestration decision with justification: {orchestrator_decision}"
     else:
         print(f"ERROR: {st.session_state.previous_response_type}")
         prompt = f"UKNOWN ERROR related to ReAct pipeline. Previous response_type was: {st.session_state.previous_response_type}"
     
-    if st.session_state.current_agent != 'interviewer_instruction' and st.session_state.current_agent != 'planer_instruction':
+    if st.session_state.current_agent != 'interview_agent' and st.session_state.current_agent != 'planner_agent':
         send_msg(role="assistant", text=f'There was an unexpected ERROR related to agent role. Current agent: {st.session_state.current_agent}. Please try again.')
         st.session_state.previous_response_type = "ERROR"
         print(st.session_state.current_agent)
@@ -76,12 +76,24 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
 
     interaction = agents.agent_response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, agent_type=st.session_state.current_agent)
 
+    response_type_before_json = type(interaction)
+
+    print(response_type_before_json)
+
+    interaction_json = json.loads(interaction)
+
+    response_type_after_json = type(interaction_json)
+
+    print(f"response_type_before_json: {response_type_before_json}, response_type_after_json {response_type_after_json}")
+
     print("PROMPT:", prompt)
-    print("INTERACTION:", interaction.output_text)
+    print("INTERACTION:", interaction["content"])
 
     # Set steamlit state variables based on response_type funcion results 
-    model_response_type = interaction["type"]
+    model_response_type = interaction["response_type"]
     
+    print("Model response type: ", model_response_type)
+
     if model_response_type == 'answer':
         send_msg(role="assistant", text=interaction.output_text["content"])
         st.session_state.previous_response_type = model_response_type
@@ -93,5 +105,5 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         send_msg(role="assistant", text=f'There was an unexpected ERROR: {st.session_state.previous_response_type}. Please try again.')
         st.session_state.previous_response_type = "ERROR"
 
-    st.session_state.current_thinking_process.append(interaction.output_text)
+    st.session_state.current_thinking_process.append(interaction["content"])
     st.rerun()

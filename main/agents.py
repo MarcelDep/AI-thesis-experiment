@@ -1,8 +1,10 @@
 import  rag
+import  json
 import  config
 import  geocoder
 from    datetime                           import date
 from    google                             import genai
+from    pydantic                           import BaseModel
 
 client = genai.Client()
 
@@ -28,12 +30,22 @@ def agent_response(prompt, answer_history, current_ReAct_history, agent_type):
         response_format = config.llm[agent_type+"_response_format"],
     )
 
-    if agent_type == 'interview_agent':
-        result = config.InterviewAgentResponse.model_validate_json(interaction.output_text)
-    elif agent_type == 'planner_agent':
-        result = config.PlannerAgentResponse.model_validate_json(interaction.output_text)
+    # Zapisujesz wynik do klasy - po co? Po 2 jak możesz później uzyskać dostęp do tych informacji z klasy. To co teraz jest ponizej jest chyba bez sensu bo nie mam jeszcze nic zapisane w tych klasach
 
-    return result
+    #if agent_type == 'interview_agent':
+     #   result = config.InterviewAgentResponse.model_validate_json(interaction.output_text)
+    #elif agent_type == 'planner_agent':
+     #   result = config.PlannerAgentResponse.model_validate_json(interaction.output_text)
+    
+    print("Response type before json: ", type(interaction.output_text))
+
+    agent_answer = json.loads(interaction.output_text)
+
+    print("Agent response: ", agent_answer)
+    print("Response type: ", type(agent_answer))
+    print("Agent response content: ", agent_answer["content"])
+
+    return interaction
 
 def orchiestrator(prompt, answer_history, current_ReAct_history):
     interaction = client.interactions.create(
@@ -43,12 +55,16 @@ def orchiestrator(prompt, answer_history, current_ReAct_history):
         generation_config = config.llm["orchestrator_config"],
         response_format = config.llm["orchestrator_response_format"],
     )
-    model_response = interaction.output_text
 
-    if model_response["justification"] == '':
-        justification = "There wasn't any justifiaction."
+    print("Response type before json: ", type(interaction.output_text))
 
-    return model_response["agent"], justifiaction
+    orchestrator_answer = json.loads(interaction.output_text)
+
+    print("Agent chosed by an orchestrator: ", orchestrator_answer)
+    print("Response type: ", type(orchestrator_answer))
+    print("Agent: ", orchestrator_answer["agent"])
+
+    return orchestrator_answer
 
 class InterviewAgent:
     def __init__(self):
