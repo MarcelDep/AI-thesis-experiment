@@ -29,14 +29,7 @@ def agent_response(prompt, answer_history, current_ReAct_history, agent_type):
         generation_config = config.llm["agent_config"],
         response_format = config.llm[agent_type+"_response_format"],
     )
-    print("Response type before json: ", type(interaction.output_text))
-    
     response = config.InterviewAgentResponse.model_validate_json(interaction.output_text)
-
-    print("Agent response: ", response)
-    print("Response type: ", type(response))
-    print("Agent response content: ", response["content"])
-    print("Agent state: ", response["state_updates"])
 
     return response
 
@@ -53,14 +46,12 @@ def orchiestrator(prompt, answer_history, current_ReAct_history):
     decision = config.OrchestratorResponse.model_validate_json(interaction.output_text)
 
     print("Agent chosed by an orchestrator: ", decision)
-    print("Response type: ", type(decision))
-    print("Agent: ", decision["agent"])
 
     return decision
 
-class IntervierAgent:
+class InterviewAgent:
     def __init__(self):
-        self.state = config.InterveiwState()
+        self.state = config.InterviewState()
 
     def response(self, prompt, answer_history, current_ReAct_history):
         response = agent_response(prompt=prompt, answer_history=answer_history, current_ReAct_history=current_ReAct_history, agent_type="interview_agent")

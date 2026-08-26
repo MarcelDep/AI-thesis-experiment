@@ -16,6 +16,9 @@ if "messages" not in st.session_state:
 if "previous_response_type" not in st.session_state:
     st.session_state.previous_response_type = None
 
+if "previous_tool" not in st.session_state:
+    st.session_state.previous_tool = None
+
 if "current_agent" not in st.session_state:
     st.session_state.current_agent = ''
 
@@ -32,7 +35,7 @@ if "interview_response" not in st.session_state:
     st.session_state.interview_response = ''
 
 if "planner_response" not in st.session_state:
-    st.session_state.interview_response = ''
+    st.session_state.planner_response = ''
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -43,11 +46,14 @@ def send_msg(role, text):
         st.markdown(text)
     st.session_state.messages.append({'role': role, "content": text})
 
+InterviewAgent = agents.InterviewAgent()
+PlannerAgent = agents.PlannerAgent()
+
 modelReponses = ['thought', 'action',] 
 
 tools = ['current_date', 'user_location', 'switch_agent',]
 
-agents = ['interview_agent', 'planner_agent',]
+available_agents = ['interview_agent', 'planner_agent',]
 
 if prompt := st.chat_input("Type text here") or st.session_state.previous_response_type in modelReponses:    
     # If user has send a prompt
@@ -72,32 +78,32 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
     elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'switch_agent':
         prompt = "Current agent decided that different agent should responde right now. Review conversation and make a decision which agent should respond."
         orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process)
-        st.session_state.current_agent = orchestrator_decision[0]
+        st.session_state.current_agent = orchestrator_decision.agent
         prompt = f"Continue based on conversation history. Orchestration decision with justification: {orchestrator_decision}"
     else:
         print(f"ERROR: {st.session_state.previous_response_type}")
         prompt = f"UKNOWN ERROR related to ReAct pipeline. Previous response_type was: {st.session_state.previous_response_type}"
     
-    if st.session_state.current_agent not in agents:
+    if st.session_state.current_agent not in available_agents:
         send_msg(role="assistant", text=f'There was an unexpected ERROR related to agent role. Current agent: {st.session_state.current_agent}. Please try again.')
         st.session_state.previous_response_type = "ERROR"
         print(st.session_state.current_agent)
         st.rerun()
     elif st.session_state.current_agent == 'interview_agent':
-        interaction = IntervierAgent.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process)
+        interaction = InterviewAgent.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process)
     elif st.session_state.current_agent == 'planner_agent':
         interaction = PlannerAgent.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process)
 
-    print("Agent response type:", type(interaction))
-    print("Agent state: ", interaction.state_updates)
     print("PROMPT:", prompt)
-    print("INTERACTION:", interaction.content)
-    print("Model response type: ", interaction.response_type)
+    print("Agent response: ", interaction)
 
     if interaction.response_type == 'answer':
         send_msg(role="assistant", text=interaction.content)
         st.session_state.previous_response_type = interaction.response_type
         st.session_state.answer_history.append(interaction.content)
+    elif interaction.response_type == 'action':
+        st.session_state.previous_tool = interaction.tool
+        st.session_state.previous_response_type = interaction.response_type
     elif interaction.response_type in modelReponses:
         st.session_state.previous_response_type = interaction.response_type
     else:
