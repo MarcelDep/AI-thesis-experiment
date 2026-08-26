@@ -65,7 +65,8 @@ class IntervierAgent:
     def response(self, prompt, answer_history, current_ReAct_history):
         response = agent_response(prompt=prompt, answer_history=answer_history, current_ReAct_history=current_ReAct_history, agent_type="interview_agent")
         if response.state_updates is not None:
-            self.state = response.state_updates.model_dump(exclude_defaults=True)
+            self.state = self.state.model_copy(update=response.state_updates.model_dump(exclude_defaults=True))
+        return response
 
 class PlannerAgent:
     def __init__(self):
@@ -74,4 +75,5 @@ class PlannerAgent:
     def response(self, prompt, answer_history, current_ReAct_history):
         response = agent_response(prompt=prompt, answer_history=answer_history, current_ReAct_history=current_ReAct_history, agent_type="planner_agent")
         if response.state_updates is not None:
-            self.state = response.state_updates.model_dump(exclude_defaults=True)
+            self.state = self.state.model_copy(update=response.state_updates.model_dump(exclude_defaults=True))
+        return response

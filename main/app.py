@@ -28,6 +28,12 @@ if "current_thinking_process" not in st.session_state:
 if "error_retry_count" not in st.session_state:
     st.session_state.error_retry_count = 0
 
+if "interview_response" not in st.session_state:
+    st.session_state.interview_response = ''
+
+if "planner_response" not in st.session_state:
+    st.session_state.interview_response = ''
+
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -37,7 +43,11 @@ def send_msg(role, text):
         st.markdown(text)
     st.session_state.messages.append({'role': role, "content": text})
 
-modelReponses = ['thought', 'action - current_date', 'action - user_location', 'action - switch_agent'] 
+modelReponses = ['thought', 'action',] 
+
+tools = ['current_date', 'user_location', 'switch_agent',]
+
+agents = ['interview_agent', 'planner_agent',]
 
 if prompt := st.chat_input("Type text here") or st.session_state.previous_response_type in modelReponses:    
     # If user has send a prompt
@@ -47,7 +57,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         st.session_state.current_thinking_process = []
         # Orchestrator choose which agent should response
         orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process)
-        st.session_state.current_agent = orchestrator_decision["agent"]
+        st.session_state.current_agent = orchestrator_decision.agent
     # If model previous message has been a thought
     elif st.session_state.previous_response_type == 'thought':
         prompt = "NOT USER RESPONSE: Continue response based on conversation history."
@@ -68,42 +78,32 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         print(f"ERROR: {st.session_state.previous_response_type}")
         prompt = f"UKNOWN ERROR related to ReAct pipeline. Previous response_type was: {st.session_state.previous_response_type}"
     
-    if st.session_state.current_agent != 'interview_agent' and st.session_state.current_agent != 'planner_agent':
+    if st.session_state.current_agent not in agents:
         send_msg(role="assistant", text=f'There was an unexpected ERROR related to agent role. Current agent: {st.session_state.current_agent}. Please try again.')
         st.session_state.previous_response_type = "ERROR"
         print(st.session_state.current_agent)
         st.rerun()
+    elif st.session_state.current_agent == 'interview_agent':
+        interaction = IntervierAgent.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process)
+    elif st.session_state.current_agent == 'planner_agent':
+        interaction = PlannerAgent.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process)
 
-    interaction = agents.agent_response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, agent_type=st.session_state.current_agent)
-
-    response_type_before_json = type(interaction)
-
-    print(response_type_before_json)
-
-    interaction_json = json.loads(interaction)
-
-    response_type_after_json = type(interaction_json)
-
-    print(f"response_type_before_json: {response_type_before_json}, response_type_after_json {response_type_after_json}")
-
+    print("Agent response type:", type(interaction))
+    print("Agent state: ", interaction.state_updates)
     print("PROMPT:", prompt)
-    print("INTERACTION:", interaction["content"])
+    print("INTERACTION:", interaction.content)
+    print("Model response type: ", interaction.response_type)
 
-    # Set steamlit state variables based on response_type funcion results 
-    model_response_type = interaction["response_type"]
-    
-    print("Model response type: ", model_response_type)
-
-    if model_response_type == 'answer':
-        send_msg(role="assistant", text=interaction.output_text["content"])
-        st.session_state.previous_response_type = model_response_type
-        st.session_state.answer_history.append(interaction.output_text["content"])
-    elif model_response_type in modelReponses:
-        st.session_state.previous_response_type = model_response_type
+    if interaction.response_type == 'answer':
+        send_msg(role="assistant", text=interaction.content)
+        st.session_state.previous_response_type = interaction.response_type
+        st.session_state.answer_history.append(interaction.content)
+    elif interaction.response_type in modelReponses:
+        st.session_state.previous_response_type = interaction.response_type
     else:
         print(f"ERROR - model will try again: {st.session_state.previous_response_type}")
         send_msg(role="assistant", text=f'There was an unexpected ERROR: {st.session_state.previous_response_type}. Please try again.')
         st.session_state.previous_response_type = "ERROR"
 
-    st.session_state.current_thinking_process.append(interaction["content"])
+    st.session_state.current_thinking_process.append(interaction.content)
     st.rerun()
