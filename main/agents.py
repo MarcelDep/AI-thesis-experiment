@@ -26,7 +26,6 @@ def agent_response(prompt, answer_history, current_ReAct_history, agent_type):
         model = config.llm["model"],
         system_instruction = config.llm[agent_type+'_instruction'],
         input = f'CONVERSATION HISTORY: {answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {current_ReAct_history} | RAG CONTEXT: {chunk_collection.query(query_texts=prompt, n_results=3)} | PROMPT: {prompt}',
-        generation_config = config.llm["agent_config"],
         response_format = config.llm[agent_type+"_response_format"],
     )
     response = config.InterviewAgentResponse.model_validate_json(interaction.output_text)
@@ -38,7 +37,6 @@ def orchiestrator(prompt, answer_history, current_ReAct_history):
         model = config.llm["model"],
         system_instruction = config.llm["orchestrator_instruction"],
         input = f'CONVERSATION HISTORY: {answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {current_ReAct_history}, PROMPT: {prompt}',
-        generation_config = config.llm["orchestrator_config"],
         response_format = config.llm["orchestrator_response_format"],
     )
     print("Response type before json: ", type(interaction.output_text))
