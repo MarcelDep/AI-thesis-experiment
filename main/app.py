@@ -58,6 +58,7 @@ available_agents = ['interview_agent', 'planner_agent',]
 if prompt := st.chat_input("Type text here") or st.session_state.previous_response_type in modelReponses:    
     # If user has send a prompt
     if prompt != None and prompt != True:
+        print("USER PROMPT:", prompt)
         send_msg(role="user", text=prompt)
         st.session_state.answer_history.append(f"USER PROMPT: {prompt}")
         st.session_state.current_thinking_process = []
@@ -94,8 +95,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
     elif st.session_state.current_agent == 'planner_agent':
         interaction = PlannerAgent.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process)
 
-    print("PROMPT:", prompt)
-    print("Agent response: ", interaction)
+    print(f"Agent {st.session_state.current_agent} response: ", interaction)
 
     if interaction.response_type == 'answer':
         send_msg(role="assistant", text=interaction.content)
