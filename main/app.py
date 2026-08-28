@@ -91,9 +91,11 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         print(st.session_state.current_agent)
         st.rerun()
     elif st.session_state.current_agent == 'interview_agent':
-        interaction = InterviewAgent.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process)
+        interaction, state = InterviewAgent.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, agent_state=st.session_state.interview_response)
+        st.session_state.interview_response = state
     elif st.session_state.current_agent == 'planner_agent':
-        interaction = PlannerAgent.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process)
+        interaction, state = PlannerAgent.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, agent_state=st.session_state.planner_response)
+        st.session_state.planner_response = state
 
     print(f"Agent {st.session_state.current_agent} response: ", interaction)
 
