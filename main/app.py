@@ -63,7 +63,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         st.session_state.answer_history.append(f"USER PROMPT: {prompt}")
         st.session_state.current_thinking_process = []
         # Orchestrator choose which agent should response
-        orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process)
+        orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, interview_agent_state=st.session_state.interview_response, planner_agent_state=st.session_state.planner_response)
         st.session_state.current_agent = orchestrator_decision.agent
     # If model previous message has been a thought
     elif st.session_state.previous_response_type == 'thought':
@@ -78,7 +78,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         prompt = f"user_location tool RESPONSE: {location}"
     elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'switch_agent':
         prompt = "Current agent decided that different agent should responde right now. Review conversation and make a decision which agent should respond."
-        orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process)
+        orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, interview_agent_state=st.session_state.interview_response, planner_agent_state=st.session_state.planner_response)
         st.session_state.current_agent = orchestrator_decision.agent
         prompt = f"Continue based on conversation history. Orchestration decision with justification: {orchestrator_decision}"
     else:

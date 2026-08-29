@@ -44,11 +44,11 @@ def agent_response(prompt, answer_history, current_ReAct_history, agent_state, a
 
     return response
 
-def orchiestrator(prompt, answer_history, current_ReAct_history):
+def orchiestrator(prompt, answer_history, current_ReAct_history, interview_agent_state, planner_agent_state):
     interaction = client.interactions.create(
         model = config.llm["model"],
         system_instruction = config.llm["orchestrator_instruction"],
-        input = f'CONVERSATION HISTORY: {answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {current_ReAct_history}, PROMPT: {prompt}',
+        input = f'CONVERSATION HISTORY: {answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {current_ReAct_history}, INTERVIEW AGENT STATE: {}, PLANNER AGENT STATE: {}, PROMPT: {prompt}',
         response_format = config.llm["orchestrator_response_format"],
     )
 
@@ -79,3 +79,6 @@ class PlannerAgent:
             self.state = self.state.model_copy(update=response.state_updates.model_dump(exclude_defaults=True))
         print(f"Planner agent state {self.state}")
         return response, self.state
+
+# Popraw interview agent - musi zebrać WSZYSTKIE informacje przed przekazaniem ich do plannera
+# popraw overwrite self.status przez agentów
