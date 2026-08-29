@@ -2,8 +2,14 @@ import logging
 from datetime import datetime
 from pythonjsonlogger.json import JsonFormatter
 
-logging.basicConfig(level=logging.INFO, filename=f"{current_time}.log", filemode="w",
-                    format="%(asctime)s - %(levelname)s - %(message)s")
+current_time = current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+handler = logging.FileHandler(f"logs/{current_time}.log")
+handler.setFormatter(JsonFormatter())
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(handler)
 
 def log_user_messages(prompt):
     logger.info(
@@ -19,14 +25,10 @@ def log_orchestrator_activity(agent, justification):
 def log_agent_activity(agent, response_type, content, state):
     logger.info(
         f"Agent: {agent}",
-        extra={"response_type": f"{response}", "content": f"{content}", "state": f"{state}"},
+        extra={"response_type": f"{response_type}", "content": f"{content}", "state": f"{state}"},
     )
 
-def errors_activity(error_msg, ):
-    logger.info(
+def log_errors(error_msg,):
+    logger.error(
         f"{error_msg}",
-        extra={"response_type": f"{response}", "content": f"{content}", "state": f"{state}"},
     )
-
-current_time = datetime.now()
-print(current_time.time())

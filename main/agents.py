@@ -1,6 +1,7 @@
 import  rag
 import  json
 import  config
+import  logger
 import  geocoder
 from    datetime                           import date
 from    google                             import genai
@@ -53,7 +54,7 @@ def orchiestrator(prompt, answer_history, current_ReAct_history, interview_agent
     )
 
     decision = config.OrchestratorResponse.model_validate_json(interaction.output_text)
-
+    logger.log_orchestrator_activity(decision.agent, decision.justification)
     print("Agent chosed by an orchestrator: ", decision)
 
     return decision
@@ -66,7 +67,8 @@ class InterviewAgent:
         response = agent_response(prompt=prompt, answer_history=answer_history, current_ReAct_history=current_ReAct_history, agent_state=agent_state, agent_type="interview_agent",)
         if response.state_updates is not None:
             self.state = self.state.model_copy(update=response.state_updates.model_dump(exclude_defaults=True))
-        print(f"Interview agent state {self.state}")
+        print(f"Interview agent state {self.state}")   
+        logger.log_agent_activity("interview_agent", response.response_type, response.content, self.state)
         return response, self.state
 
 class PlannerAgent:
@@ -78,6 +80,7 @@ class PlannerAgent:
         if response.state_updates is not None:
             self.state = self.state.model_copy(update=response.state_updates.model_dump(exclude_defaults=True))
         print(f"Planner agent state {self.state}")
+        logger.log_agent_activity("planner_agent", response.response_type, response.content, self.state)
         return response, self.state
 
 # Popraw interview agent - musi zebrać WSZYSTKIE informacje przed przekazaniem ich do plannera
