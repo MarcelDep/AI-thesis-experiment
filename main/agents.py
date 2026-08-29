@@ -48,7 +48,7 @@ def orchiestrator(prompt, answer_history, current_ReAct_history, interview_agent
     interaction = client.interactions.create(
         model = config.llm["model"],
         system_instruction = config.llm["orchestrator_instruction"],
-        input = f'CONVERSATION HISTORY: {answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {current_ReAct_history}, INTERVIEW AGENT STATE: {}, PLANNER AGENT STATE: {}, PROMPT: {prompt}',
+        input = f'CONVERSATION HISTORY: {answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {current_ReAct_history}, INTERVIEW AGENT STATE: {interview_agent_state}, PLANNER AGENT STATE: {planner_agent_state}, PROMPT: {prompt}',
         response_format = config.llm["orchestrator_response_format"],
     )
 

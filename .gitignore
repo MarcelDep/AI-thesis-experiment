@@ -4,3 +4,4 @@ APIkey
 chromadb
 main/chroma_db
 main/__pycache__
+main/logs
