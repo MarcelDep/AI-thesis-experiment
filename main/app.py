@@ -34,12 +34,6 @@ if "current_thinking_process" not in st.session_state:
 if "error_retry_count" not in st.session_state:
     st.session_state.error_retry_count = 0
 
-if "interview_response" not in st.session_state:
-    st.session_state.interview_response = ''
-
-if "planner_response" not in st.session_state:
-    st.session_state.planner_response = ''
-
 if "interview_agent_instance" not in st.session_state:
     st.session_state.interview_agent_instance = agents.InterviewAgent()
 
@@ -70,7 +64,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         st.session_state.answer_history.append(f"USER PROMPT: {prompt}")
         st.session_state.current_thinking_process = []
         # Orchestrator choose which agent should response
-        orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, interview_agent_state=st.session_state.interview_response, planner_agent_state=st.session_state.planner_response)
+        orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, interview_agent_state=st.session_state.interview_agent_instance.state, planner_agent_state=st.session_state.planner_agent_instance.state)
         st.session_state.current_agent = orchestrator_decision.agent
     # If model previous message has been a thought
     elif st.session_state.previous_response_type == 'thought':
@@ -86,7 +80,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
     # If model previous message has been an action - more specifically switch_agent tool call
     elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'switch_agent':
         prompt = "Current agent decided that different agent should responde right now. Review conversation and make a decision which agent should respond."
-        orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, interview_agent_state=st.session_state.interview_response, planner_agent_state=st.session_state.planner_response)
+        orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, interview_agent_state=st.session_state.interview_agent_instance.state, planner_agent_state=st.session_state.planner_agent_instance.state)
         st.session_state.current_agent = orchestrator_decision.agent
         prompt = f"Continue based on conversation history. Orchestration decision with justification: {orchestrator_decision}"
     # Else - call an error
@@ -104,12 +98,10 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         st.rerun()
     # If interview agent was chosen
     elif st.session_state.current_agent == 'interview_agent':
-        interaction, state = st.session_state.interview_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, agent_state=st.session_state.interview_response)
-        st.session_state.interview_response = state
+        interaction, state = st.session_state.interview_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process,)
     # If planner agent was chosen
     elif st.session_state.current_agent == 'planner_agent':
-        interaction, state = st.session_state.planner_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, agent_state=st.session_state.planner_response)
-        st.session_state.planner_response = state
+        interaction, state = st.session_state.planner_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process,)
 
     print(f"Agent {st.session_state.current_agent} response: ", interaction)
 
