@@ -31,3 +31,19 @@ agenci wiedzą o swoim istnieniu z system prompta, wiedzą o tym jakie maja dost
 3. agent odpowiada ReAct frameworkiem i wypełnia json (jedno z pól w json to odpowiedź ReAct)
 4. json jest przekazywany orchestrator i wracamy do punktu 2 aż zostanie wygenerowana odpowiedź z <answer>
 5. wtedy odpowiedz jest wyswietlana uzytkownikowi i wracamy do 1
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Część wspólna dla wszystkich agentów:
+1. Odpowiadanie (response())
+
+Informacje wspólne dla wszystkich agentów:
+1. prompt
+2. answer_history 
+3. current_ReAct_history
+
+Muszę zrobić interfes agentów w którym uogólnie najwięcej ile się da - response
+
+Przekazuj wspólne parametry jako class/list a nie z osobna 
+
+Zastąp funkcją cały łańcuch if/elif/else sprawdzający typ wiadomości w app.py
