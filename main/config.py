@@ -38,6 +38,19 @@ class OrchestratorResponse(BaseModel):
     agent: Literal["interview_agent", "planner_agent"]
     justification: str = ""
 
+class TaskAssessment(BaseModel):
+    task_name: str
+    status: Literal["done", "in_progress", "not_started"]
+    justification: str = ''
+    confidence: float = 0.0
+
+class TaskExecutionAgent(BaseModel):
+    response_type: Literal["thought", "action", "answer"]
+    content: str
+    tool: Optional[Literal["get_commit_diff", "switch_agent"]] = None
+    tool_input: Optional[str] = None
+    assessments: Optional[list[TaskAssessment]] = None
+
 INTERVIEW_AGENT_RESPONSE_DESCRIPTION = """
 You must respond in JSON format with the following fields:
 - "response_type": one of "thought", "action", or "answer"
