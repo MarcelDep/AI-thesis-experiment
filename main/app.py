@@ -1,3 +1,4 @@
+import  os
 import  rag
 import  json
 import  agents
@@ -5,7 +6,11 @@ import  logger
 import  streamlit                          as st
 from    google                             import genai
 
+# UI
+
 st.title("Project Management Agent")
+
+st.session_state.github_repo = st.sidebar.text_input("Enter your GitHub repo in 'owner/repo' format.")
 
 print('================START================')
 
@@ -40,6 +45,12 @@ if "interview_agent_instance" not in st.session_state:
 if "planner_agent_instance" not in st.session_state:
     st.session_state.planner_agent_instance = agents.PlannerAgent()
 
+if "github_repo" not in st.session_state:
+    st.session_state.github_repo = ''
+
+if "last_checked_commit" not in st.session_state:
+    st.session_state.last_checked_commit = ''
+
 # Streamlit roles
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -51,9 +62,12 @@ def send_msg(role, text):
     st.session_state.messages.append({'role': role, "content": text})
 
 # Variables
+github_pat = os.getenv("GITHUB_PAT")
 modelReponses = ['thought', 'action',] 
 tools = ['current_date', 'user_location', 'switch_agent',]
 available_agents = ['interview_agent', 'planner_agent',]
+
+print(github_pat)
 
 # Trigger when user has send a prompt or when previous message has been a thought or an action
 if prompt := st.chat_input("Type text here") or st.session_state.previous_response_type in modelReponses:    

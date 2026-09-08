@@ -44,7 +44,7 @@ class TaskAssessment(BaseModel):
     justification: str = ''
     confidence: float = 0.0
 
-class TaskExecutionAgent(BaseModel):
+class TrackingAgent(BaseModel):
     response_type: Literal["thought", "action", "answer"]
     content: str
     tool: Optional[Literal["get_commit_diff", "switch_agent"]] = None
@@ -96,4 +96,5 @@ llm = {
     "interview_agent_response_format": {"type": "text", "mime_type": "application/json", "schema": InterviewAgentResponse.model_json_schema()},
     "planner_agent_response_format":  {"type": "text", "mime_type": "application/json", "schema": PlannerAgentResponse.model_json_schema()},
     "orchestrator_response_format":  {"type": "text", "mime_type": "application/json", "schema": OrchestratorResponse.model_json_schema()},
+    "tracking_agent_response_format": {"type": "text", "mime_type": "application/json", "schema": TrackingAgent.model_json_schema()},
 }
