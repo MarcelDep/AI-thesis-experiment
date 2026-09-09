@@ -5,6 +5,10 @@ import  agents
 import  logger
 import  streamlit                          as st
 from    google                             import genai
+from    github                             import Github
+from    dotenv                             import load_dotenv
+
+load_dotenv()
 
 # UI
 

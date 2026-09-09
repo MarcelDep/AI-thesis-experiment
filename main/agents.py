@@ -50,8 +50,13 @@ def orchiestrator(prompt, answer_history, current_ReAct_history, interview_agent
 
 class Agent(ABC):
     def response(self, prompt, answer_history, current_ReAct_history,):
-        interaction = agent_response(prompt=prompt, answer_history=answer_history, current_ReAct_history=current_ReAct_history, 
-                                    agent_state=self.state, agent_type=self.agent_type, system_instruction=self.system_prompt, response_format=self.response_format)
+        interaction = agent_response(prompt=prompt, 
+                                    answer_history=answer_history, 
+                                    current_ReAct_history=current_ReAct_history, 
+                                    agent_state=self.state, 
+                                    agent_type=self.agent_type, 
+                                    system_instruction=self.system_prompt, 
+                                    response_format=self.response_format)
         response = self.validate_json(interaction.output_text)        
         if response.state_updates is not None:
             self.state = self.state.model_copy(update=response.state_updates.model_dump(exclude_defaults=True))
@@ -74,5 +79,13 @@ class PlannerAgent(Agent):
         self.system_prompt = config.llm['planner_agent_instruction']
         self.response_format = config.llm["planner_agent_response_format"]
         self.validate_json = config.PlannerAgentResponse.model_validate_json
+
+class TrackingAgent(Agent):
+    def __init__(self,):
+        self.agent_type = "tracking_agent"
+        self.state = config.TrackingState()
+        self.system_prompt = config.llm['tracking_agent_instruction']
+        self.response_format = config.llm["tracking_agent_response_format"]
+        self.validate_json = config.TrackingAgentResponse.model_validate_json
 
 # Dodaj wymuszenie stworzenia wszystkich powyzszych selfow w kazdej klasie agent za pomoca @abstractmethod

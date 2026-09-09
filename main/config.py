@@ -1,6 +1,13 @@
 from pydantic import BaseModel
 from typing import Optional, Literal
 
+agents = {
+    'orchestrator': 'Analyses user needs and routes to the appropriate agent',
+    'interview_agent': 'Interviews user to define project goals, technologies, working style and requirements',
+    'planner_agent': 'Breaks project into structured tasks and sprint plans based on interview data',
+    'tracking_agent': 'Monitors GitHub commits and assesses whether planned tasks are correctly implemented',
+}
+
 database = {
     "THRESHOLD": 0.3,
 }
@@ -22,6 +29,12 @@ class PlannerState(BaseModel):
     tasks: list[Task] = []
     extra_content: str = ""
 
+class TrackingState(BaseModel):
+    task_name: str
+    status: Literal["done", "in_progress", "not_started"]
+    justification: str = ''
+    confidence: float = 0.0
+
 class InterviewAgentResponse(BaseModel):
     response_type: Literal["thought", "action", "answer"]
     content: str
@@ -38,18 +51,12 @@ class OrchestratorResponse(BaseModel):
     agent: Literal["interview_agent", "planner_agent"]
     justification: str = ""
 
-class TaskAssessment(BaseModel):
-    task_name: str
-    status: Literal["done", "in_progress", "not_started"]
-    justification: str = ''
-    confidence: float = 0.0
-
-class TrackingAgent(BaseModel):
+class TrackingAgentResponse(BaseModel):
     response_type: Literal["thought", "action", "answer"]
     content: str
     tool: Optional[Literal["get_commit_diff", "switch_agent"]] = None
     tool_input: Optional[str] = None
-    assessments: Optional[list[TaskAssessment]] = None
+    state_updates: Optional[list[TrackingState]] = None
 
 INTERVIEW_AGENT_RESPONSE_DESCRIPTION = """
 You must respond in JSON format with the following fields:
@@ -88,11 +95,28 @@ You must respond in JSON format with the following fields:
 - "justification": short explanation of why you chose this agent. Can be empty string if obvious.
 """
 
+TRACKING_AGENT_RESPONSE_DESCRIPTION = """
+You must respond in JSON format with the following fields:
+- "response_type": one of "thought", "action", or "answer"
+    - "thought": use when reasoning about which commits to inspect, how they relate to planned tasks, or evaluating confidence in your assessment
+    - "action": use when calling a tool to inspect commit details
+    - "answer": use when delivering your final progress assessment to the user
+- "content": your actual response text — reasoning in thought, tool call description in action, or summary assessment in answer
+- "tool": only when response_type is "action", one of: "get_commit_diff" to inspect actual code changes for a specific commit, "switch_agent" if a different agent should handle the current request. Otherwise null.
+- "tool_input": only when response_type is "action" and tool is "get_commit_diff" — provide the commit SHA you want to inspect. Otherwise null.
+- "state_updates": only when response_type is "answer" — provide a list of task assessments, one per planned task. Otherwise null. Each assessment contains:
+    - "task_name": exact name of the task from the project plan
+    - "status": one of "done", "in_progress", or "not_started" based on commit evidence
+    - "justification": brief explanation of why you assigned this status, referencing specific commits where possible
+    - "confidence": float between 0.0 and 1.0 indicating how confident you are in this assessment — lower when commit messages are vague or diffs weren't inspected, higher when code changes clearly match task requirements
+"""
+
 llm = {
     "model": "gemini-3.1-flash-lite",
-    "orchestrator_instruction": f"You are an orchestrator project management AI-Agent. You are part of a chatbot in an application that uses AI to make it easier for users to complete IT projects. Your responsibility is to analyse user needs based on their prompt and choose which agent should response. There are three agents in this app - orchestrator (you), interview agent (it's task is to task is to interview user and define the project goals, preferred technologies, the users preferred working style) and planner agent (its task is to break the project down into smaller tasks so that the user can easily start implementing it based on information gathered from interview agent). Interview agent should gather all necesarry information from user described in {INTERVIEW_AGENT_RESPONSE_DESCRIPTION} in state_updates section. After this information is gathered start using planner agent. Your answers will be json structred, here is specific description of available fields and their role: {ORCHESTRATOR_RESPONSE_DESCRIPTION}. User response messeges will start with 'USER PROMPT:' - everything else is message, agents have generated.",
-    "interview_agent_instruction": f"You are a project management agent specialized in interviewing clients. You are part of a chatbot in an application that uses AI to make it easier for users to complete IT projects. There are three agents in this app - orchestrator (decide which agent will respond), interview agent (you) and planner agent (it will plan tasks based on your interview). You're task is to interview user. Based on that interview, you will define the project goals, preferred technologies, the users preferred working style. Work in ReAct workflow. Choose following types of messages while generating answer in response_type field: thought - use thought to plan what information you still need, decide whether to call a tool, and determine if you have enough to answer., action - use this to call tool, answer - use this to print your final response to user. You MUST follow this exact sequence for every response: first send a thought message, then either an action message (if you need a tool) or an answer message. Never send an answer without a preceding thought in the same turn. Your answers will be json structred, here is specific description of available fields and their role: {INTERVIEW_AGENT_RESPONSE_DESCRIPTION}. User response messeges will start with 'USER PROMPT:' - everything else is message, agents have generated.",
-    "planner_agent_instruction": f"You are a project management agent specialized in planning tasks based on interview with user.  You are part of a chatbot in an application that uses AI to make it easier for users to complete IT projects. There are three agents in this app - orchestrator (decide which agent will respond), interview agent (interview user to gather information necessary for proper task planning) and planner agent (you). Your task is to break the project down into smaller tasks so that the user can easily start implementing it based on information gathered from interview agent. Work in ReAct workflow. Choose following types of messages while generating answer in response_type field: thought - use thought to plan what information you still need, decide whether to call a tool, and determine if you have enough to answer, action - use this to call tool, answer - use this to print your final response to user. You MUST follow this exact sequence for every response: first send a thought message, then either an action message (if you need a tool) or an answer message. Never send an answer without a preceding thought in the same turn. Your answers will be json structred, here is specific description of available fields and their role: {PLANNER_AGENT_RESPONSE_DESCRIPTION}. User response messeges will start with 'USER PROMPT:' - everything else is message, agents have generated.",
+    "orchestrator_instruction": f"You are an orchestrator project management AI-Agent. You are part of a chatbot in an application that uses AI to make it easier for users to complete IT projects. Your responsibility is to {agents["orchestrator"]}. There are {len(agents)} agents in this app - {agents} Interview agent should gather all necesarry information from user described in {INTERVIEW_AGENT_RESPONSE_DESCRIPTION} in state_updates section. After this information is gathered start using planner agent. Your answers will be json structred, here is specific description of available fields and their role: {ORCHESTRATOR_RESPONSE_DESCRIPTION}. User response messeges will start with 'USER PROMPT:' - everything else is message, agents have generated.",
+    "interview_agent_instruction": f"You are a project management agent specialized in interviewing clients. You are part of a chatbot in an application that uses AI to make it easier for users to complete IT projects. Your responsibility is to {agents["interview_agent"]}. There are {len(agents)} agents in this app - {agents}. Work in ReAct workflow. Choose following types of messages while generating answer in response_type field: thought - use thought to plan what information you still need, decide whether to call a tool, and determine if you have enough to answer., action - use this to call tool, answer - use this to print your final response to user. You MUST follow this exact sequence for every response: first send a thought message, then either an action message (if you need a tool) or an answer message. Never send an answer without a preceding thought in the same turn. Your answers will be json structred, here is specific description of available fields and their role: {INTERVIEW_AGENT_RESPONSE_DESCRIPTION}. User response messeges will start with 'USER PROMPT:' - everything else is message, agents have generated.",
+    "planner_agent_instruction": f"You are a project management agent specialized in planning tasks based on interview with user.  You are part of a chatbot in an application that uses AI to make it easier for users to complete IT projects. Your responsibility is to {agents["planner_agent"]}. There are {len(agents)} agents in this app - {agents}. Work in ReAct workflow. Choose following types of messages while generating answer in response_type field: thought - use thought to plan what information you still need, decide whether to call a tool, and determine if you have enough to answer, action - use this to call tool, answer - use this to print your final response to user. You MUST follow this exact sequence for every response: first send a thought message, then either an action message (if you need a tool) or an answer message. Never send an answer without a preceding thought in the same turn. Your answers will be json structred, here is specific description of available fields and their role: {PLANNER_AGENT_RESPONSE_DESCRIPTION}. User response messeges will start with 'USER PROMPT:' - everything else is message, agents have generated.",
+    "tracking_agent_instruction": f"You are a project management agent specialized in tracking and assessing project progress. You are part of a chatbot in an application that uses AI to make it easier for users to complete IT projects. Your responsibility is to {agents["tracking_agent"]}. There are {len(agents)} agents in this app - {agents} Your task is to assess whether the user's GitHub commits align with the planned project tasks. You receive a list of commits with messages, authors and timestamps. For each planned task, determine its status based on available commit data. If you need to inspect actual code changes for a specific commit, use the get_commit_diff tool. Work in ReAct workflow. Choose following types of messages while generating answer in response_type field: thought - use thought to plan which commits to inspect, reason about task completion, and determine confidence in your assessment, action - use this to call a tool, answer - use this to print your final assessment to user. You MUST follow this exact sequence for every response: first send a thought message, then either an action message (if you need to inspect a diff) or an answer message. Never send an answer without a preceding thought in the same turn. When producing your final answer, populate the assessments field with per-task status, justification and confidence score. Your answers will be json structured, here is specific description of available fields and their role: {TRACKING_AGENT_RESPONSE_DESCRIPTION}. User response messages will start with 'USER PROMPT:' - everything else is a message agents have generated.",
     "interview_agent_response_format": {"type": "text", "mime_type": "application/json", "schema": InterviewAgentResponse.model_json_schema()},
     "planner_agent_response_format":  {"type": "text", "mime_type": "application/json", "schema": PlannerAgentResponse.model_json_schema()},
     "orchestrator_response_format":  {"type": "text", "mime_type": "application/json", "schema": OrchestratorResponse.model_json_schema()},
