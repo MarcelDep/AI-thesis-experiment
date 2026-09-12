@@ -118,7 +118,7 @@ You must respond in JSON format with the following fields:
 
 ORCHESTRATOR_RESPONSE_DESCRIPTION = f"""
 You must respond in JSON format with the following fields:
-- "agent": which agent should respond next, one of following agents {[k for k in agents_characteristic.keys() if k != 'orchestrator']}
+- "agent": which agent should respond next, one of following agents {[agent for agent in agents_characteristic.keys() if agent != 'orchestrator']}
 - "justification": short explanation of why you chose this agent. Can be empty string if obvious.
 """
 
