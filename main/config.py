@@ -57,8 +57,8 @@ class OrchestratorResponse(BaseModel):
     justification: str = ""
 
 class TrackingState(BaseModel):
-    task_name: str
-    status: Literal["done", "in_progress", "not_started"]
+    task_name: str = ''
+    status: Literal["done", "in_progress", "not_started"] = 'not_started'
     justification: str = ''
     confidence: float = 0.0
 
@@ -77,9 +77,9 @@ You must respond in JSON format with the following fields:
     - "answer": use when responding directly to the user
 - "content": your actual response text — thought, action reasoning, or answer to user
 - "tool": only when response_type is "action", one of: {[tools_info[tool] for tool in interview_agent_tools]}. Otherwise null.
-- "state_updates": when you learn something new about the project this turn, populate the relevant fields. Otherwise null.
+- "state_updates": ALWAYS populate this field on every "answer" turn with everything you currently know about the project. Never return null on an answer turn. Include all fields you know, even if learned in previous turns — this is a cumulative snapshot, not just what changed this turn. Use empty string "" only for fields where you genuinely have no information yet.
     - "goal": what the user wants to build
-    - "region": where the user is located
+    - "region": where the user is located  
     - "deadline": project deadline
     - "technologies": preferred tech stack
     - "requirements": specific project requirements
@@ -95,7 +95,7 @@ You must respond in JSON format with the following fields:
     - "answer": use when responding directly to the user
 - "content": your actual response text — thought, action reasoning, or answer to user
 - "tool": only when response_type is "action", one of: {[tools_info[tool] for tool in planner_agent_tools]}. Otherwise null.
-- "state_updates": when you produce or update the task breakdown, populate the relevant fields. Otherwise null.
+- "state_updates": populate this field on every "answer" turn where you have produced or refined a task breakdown. Include the complete current task list, not just new additions.
     - "tasks": list of task objects, each with "name" (task name) and "deadline" (task deadline, empty string if unknown)
     - "extra_content": anything else relevant about the plan
 """
@@ -109,7 +109,7 @@ You must respond in JSON format with the following fields:
 - "content": your actual response text — reasoning in thought, tool call description in action, or summary assessment in answer
 - "tool": only when response_type is "action", one of: {[tools_info[tool] for tool in tracking_agent_tools]}. Otherwise null.
 - "tool_input": only when response_type is "action" and tool is "get_commit_diff" — provide the commit SHA you want to inspect. Otherwise null.
-- "state_updates": only when response_type is "answer" — provide a list of task assessments, one per planned task. Otherwise null. Each assessment contains:
+- "state_updates": only when response_type is "answer" — provide a list of task assessments, one per planned task.
     - "task_name": exact name of the task from the project plan
     - "status": one of "done", "in_progress", or "not_started" based on commit evidence
     - "justification": brief explanation of why you assigned this status, referencing specific commits where possible
@@ -124,8 +124,9 @@ You must respond in JSON format with the following fields:
 
 REACT_INSTRUCTIONS = """Work in ReAct workflow. You MUST follow this exact sequence for every response:
 1. First always send a thought message — use it to plan what you need, decide whether to call a tool, and determine if you have enough information to answer.
-2. Then either an action message (if you need a tool) or an answer message.
-Never send an answer without a preceding thought in the same turn.
+2. (Optional) An action message (if you need a tool) 
+3. An answer message - final response that will be shown to user.
+Never send an answer without a preceding thought before.
 Response type field values: thought — reasoning step, action — tool call, answer — final response to user.
 User response messages will start with 'USER PROMPT:' — everything else is a message agents have generated."""
 
