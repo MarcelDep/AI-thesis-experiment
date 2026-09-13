@@ -3,6 +3,7 @@ import  json
 import  config
 import  logger
 import  geocoder
+import  requests
 from    abc                                import ABC
 from    datetime                           import date
 from    google                             import genai
@@ -22,6 +23,25 @@ def user_location():
     print(location)
     return location.latlng
 
+# Rozwiąż problem manualnego dodawania agentów do promtpa - słownik z statusem kazdego agenta?
+def switch_agent(answer_history, current_thinking_process, interview_agent_state, planner_agent_state):
+    prompt = "Current agent decided that different agent should responde right now. Review conversation and make a decision which agent should respond."
+    orchestrator_decision = orchiestrator(prompt=prompt, answer_history=current_thinking_process, current_ReAct_history=current_thinking_process, interview_agent_state=interview_agent_state, planner_agent_state=planner_agent_state)
+    return orchestrator_decision
+
+def get_commit_messages(owner, repo, token):
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",}
+    response = requests.get(f'https://api.github.com/repos/{owner}/{repo}/commits', headers).json()
+    commit_messages = [commit["commit"]["message"] for commit in response]
+    return commit_messages
+
+def get_commit_diff(owner, repo, token, base_sha, head_sha):
+    basehead = f"{base_sha}...{head_sha}"
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github.diff",}
+    response = requests.get(f'https://api.github.com/repos/{owner}/{repo}/compare/{basehead}', headers).json()
+    changes = [[file["filename"], file["patch"]] for file in response["files"]] 
+    return changes
+
 def agent_response(prompt, answer_history, current_ReAct_history, agent_state, agent_type, system_instruction, response_format):
     print(f"Agent {agent_type} sees following state as a context: {agent_state}.")
     print(f"Agent {agent_type} sees following ReAct history as a context: {current_ReAct_history}.")
@@ -31,9 +51,9 @@ def agent_response(prompt, answer_history, current_ReAct_history, agent_state, a
         input = f'CONVERSATION HISTORY: {answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {current_ReAct_history} | RAG CONTEXT: {chunk_collection.query(query_texts=prompt, n_results=3)} | AGENT STATE: {agent_state} | PROMPT: {prompt}',
         response_format = response_format,
     )
-
     return interaction
 
+# Rozwiąż problem manualnego dodawania agentów do promtpa - słownik z statusem kazdego agenta?
 def orchiestrator(prompt, answer_history, current_ReAct_history, interview_agent_state, planner_agent_state):
     interaction = client.interactions.create(
         model = config.llm["model"],

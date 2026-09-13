@@ -56,7 +56,7 @@ class OrchestratorResponse(BaseModel):
     agent: Literal["interview_agent", "planner_agent", "tracking_agent"]
     justification: str = ""
 
-class TaskAssessment(BaseModel):
+class TrackingState(BaseModel):
     task_name: str
     status: Literal["done", "in_progress", "not_started"]
     justification: str = ''
@@ -67,7 +67,7 @@ class TrackingAgentResponse(BaseModel):
     content: str
     tool: Optional[Literal["current_date", "get_commit_diff", "switch_agent"]] = None
     tool_input: Optional[str] = None
-    assessments: Optional[list[TaskAssessment]] = None
+    state_updates: Optional[list[TrackingState]] = None
 
 INTERVIEW_AGENT_RESPONSE_DESCRIPTION = f"""
 You must respond in JSON format with the following fields:
