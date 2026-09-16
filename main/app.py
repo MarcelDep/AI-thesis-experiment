@@ -60,6 +60,9 @@ if "github_user" not in st.session_state:
 if "last_checked_commit" not in st.session_state:
     st.session_state.last_checked_commit = ''
 
+if "switch_agent_called" not in st.session_state:
+    st.session_state.switch_agent_called = False
+
 # Streamlit roles
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -84,6 +87,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         send_msg(role="user", text=prompt)
         st.session_state.answer_history.append(f"USER PROMPT: {prompt}")
         st.session_state.current_thinking_process = []
+        st.session_state.interview_agent_instance.extract_state(st.session_state.answer_history)
         # Orchestrator choose which agent should response
         orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, interview_agent_state=st.session_state.interview_agent_instance.state, planner_agent_state=st.session_state.planner_agent_instance.state)
         st.session_state.current_agent = orchestrator_decision.agent
@@ -100,9 +104,13 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         prompt = f"user_location tool RESPONSE: {location}"
     # If model previous message has been an action - more specifically switch_agent tool call
     elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'switch_agent':
-        orchestrator_decision = agents.switch_agent(answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, interview_agent_state=st.session_state.interview_agent_instance.state, planner_agent_state=st.session_state.planner_agent_instance.state)
-        st.session_state.current_agent = orchestrator_decision.agent
-        prompt = f"Continue based on conversation history. Orchestration decision with justification: {orchestrator_decision}"
+        if st.session_state.switch_agent_called == False:
+            st.session_state.switch_agent_called = True
+            orchestrator_decision = agents.switch_agent(answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, interview_agent_state=st.session_state.interview_agent_instance.state, planner_agent_state=st.session_state.planner_agent_instance.state)
+            st.session_state.current_agent = orchestrator_decision.agent
+            prompt = f"Continue based on conversation history. Orchestration decision with justification: {orchestrator_decision}"
+        else:
+            prompt = f"You have been selected by the orchestrator to respond. Continue the conversation directly. Do NOT call switch_agent."
     # Else - call an error
     else:
         error_msg = f"ERROR: {st.session_state.previous_response_type}"
@@ -133,6 +141,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         send_msg(role="assistant", text=interaction.content)
         st.session_state.previous_response_type = interaction.response_type
         st.session_state.answer_history.append(interaction.content)
+        st.session_state.switch_agent_called = False
     elif interaction.response_type == 'action':
         st.session_state.previous_tool = interaction.tool
         st.session_state.previous_response_type = interaction.response_type

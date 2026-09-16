@@ -68,7 +68,7 @@ def orchiestrator(prompt, answer_history, current_ReAct_history, interview_agent
 
 class Agent(ABC):
     def response(self, prompt, answer_history, current_ReAct_history,):
-        print(f"Agent {self.agent_type} sees following state as a context: {self.state}.")
+        print(f"Agent {self.agent_type} sees following state before response: {self.state}.")
         print(f"Agent {self.agent_type} sees following ReAct history as a context: {current_ReAct_history}.")        
         interaction = agent_response(prompt=prompt, 
                                     answer_history=answer_history, 
@@ -80,7 +80,7 @@ class Agent(ABC):
         response = self.validate_json(interaction.output_text)        
         if response.state_updates is not None:
             self.state = self.state.model_copy(update=response.state_updates.model_dump(exclude_defaults=True))
-        print(f"{self.agent_type} state {self.state}")   
+        print(f"{self.agent_type} state after response: {self.state}")   
         logger.log_agent_activity(f"{self.agent_type}", response.response_type, response.content, self.state)
         return response
 
@@ -92,27 +92,19 @@ class InterviewAgent(Agent):
         self.response_format = config.llm["interview_agent_response_format"]
         self.validate_json = config.InterviewAgentResponse.model_validate_json
 
-    def extract_state(self, answer_history, current_ReAct_history):
+    def extract_state(self, answer_history, ):
         prompt = "Given this conversation and the latest answer, extract any project information that was discussed. Return only what's explicitly stated."
         system_instruction = "You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
         interaction = agent_response(prompt=prompt,
                                     answer_history=answer_history, 
-                                    current_ReAct_history=current_ReAct_history, 
+                                    current_ReAct_history="", 
                                     agent_state=self.state, 
                                     agent_type=self.agent_type, 
                                     system_instruction=system_instruction, 
                                     response_format={"type": "text", "mime_type": "application/json", "schema": config.InterviewState.model_json_schema()})
-        response = config.InterviewState.model_validate_json(interaction.output_text)        
-        print(response)
+        response = config.InterviewState.model_validate_json(interaction.output_text)     
         self.state = self.state.model_copy(update=response.model_dump(exclude_defaults=True))
         print(f"Extraction: {self.agent_type} state {self.state}")   
-
-    def response(self, prompt, answer_history, current_ReAct_history,):
-        response = super().response(prompt, answer_history, current_ReAct_history)
-        if response.response_type == 'answer':
-            self.extract_state(answer_history, current_ReAct_history)
-        print(self.state)
-        return response
 
 class PlannerAgent(Agent):
     def __init__(self,):

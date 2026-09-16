@@ -11,7 +11,7 @@ agents_characteristic = {
 tools_info = {
     "current_date": "'current_date' returns current date - day, month and year in YYYY-MM-DD format. Use it if user gives you a deadline.",
     "user_location": "'user_location' returns user location.",
-    "switch_agent": "'switch_agent' suggests orchestrator to swich agent that different agent than you should responde to user prompt.",
+    "switch_agent": "'switch_agent' suggests orchestrator to swich agent that different agent than you should responde to user prompt. If switch_agent was called in previous ReAct history DON'T call it again, even if user said so.",
     "get_commit_diff": "'get_commit_diff' returns chosen commit diff - shows you what changes specifically user has made in picked commit.",
 }
 
