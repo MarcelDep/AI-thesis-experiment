@@ -9,7 +9,7 @@ agents_characteristic = {
 }
 
 tools_info = {
-    "current_date": "'current_date' returns current date - day, month and year in YYYY-MM-DD format.",
+    "current_date": "'current_date' returns current date - day, month and year in YYYY-MM-DD format. Use it if user gives you a deadline.",
     "user_location": "'user_location' returns user location.",
     "switch_agent": "'switch_agent' suggests orchestrator to swich agent that different agent than you should responde to user prompt.",
     "get_commit_diff": "'get_commit_diff' returns chosen commit diff - shows you what changes specifically user has made in picked commit.",
@@ -123,10 +123,10 @@ You must respond in JSON format with the following fields:
 """
 
 REACT_INSTRUCTIONS = """Work in ReAct workflow. You MUST follow this exact sequence for every response:
-1. First always send a thought message — use it to plan what you need, decide whether to call a tool, and determine if you have enough information to answer.
+1. First ALWAYS send a thought message — use it to plan what you need, decide whether to call a tool, and determine if you have enough information to answer.
 2. (Optional) An action message (if you need a tool) 
-3. An answer message - final response that will be shown to user.
-Never send an answer without a preceding thought before.
+3. An answer message AFTER thought - final response that will be shown to user.
+NEVER send an answer without a preceding thought before.
 Response type field values: thought — reasoning step, action — tool call, answer — final response to user.
 User response messages will start with 'USER PROMPT:' — everything else is a message agents have generated."""
 
@@ -143,6 +143,8 @@ interview_agent_info = {
     "json_answer_description": INTERVIEW_AGENT_RESPONSE_DESCRIPTION,
     "tools": [tools_info[tool] for tool in interview_agent_tools],
 }
+
+additional_interview_agent_into = "When all required project information has been gathered (goal, technologies, deadline, working_style, requirements), do NOT send an answer message to the user. Instead, send an action turn calling switch_agent immediately."
 
 planner_agent_info = {
     "agent_description": "You're a planner agent",
@@ -165,10 +167,12 @@ orchiestrator_info = {
     "tools": [],
 }
 
+additional_orchestrator_info = f"Only switch to other agents from interview_agent when ALL of the following fields in INTERVIEW AGENT STATE are non-empty strings: goal, technologies, deadline, working_style, requirements. If any of these fields are empty string "", keep using interview_agent regardless of what the conversation suggests. Do not infer that information is gathered from conversation text alone — check the actual state fields."
+
 llm = {
     "model": "gemini-3.1-flash-lite",
-    "orchestrator_instruction": f"{orchiestrator_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {orchiestrator_info['agent_duties']}. Interview agent should gather all necesarry information from user described in {INTERVIEW_AGENT_RESPONSE_DESCRIPTION} in state_updates section. After this information is gathered start using planner agent. {orchiestrator_info['json_answer_description']}.",
-    "interview_agent_instruction": f"{interview_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {interview_agent_info['agent_duties']}. {agent_info['ReAct_workflow']} You can use following tools: {interview_agent_info['tools']} {interview_agent_info['json_answer_description']}.",
+    "orchestrator_instruction": f"{orchiestrator_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {orchiestrator_info['agent_duties']}. {additional_orchestrator_info}. {orchiestrator_info['json_answer_description']}",
+    "interview_agent_instruction": f"{interview_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {interview_agent_info['agent_duties']}. {agent_info['ReAct_workflow']} You can use following tools: {interview_agent_info['tools']} {interview_agent_info['json_answer_description']}. {additional_interview_agent_into}",
     "planner_agent_instruction": f"{planner_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {planner_agent_info['agent_duties']}. {agent_info['ReAct_workflow']} You can use following tools: {planner_agent_info['tools']} {planner_agent_info['json_answer_description']}.",
     "tracking_agent_instruction": f"{tracking_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {tracking_agent_info['agent_duties']}. {agent_info['ReAct_workflow']} You can use following tools: {tracking_agent_info['tools']} {tracking_agent_info['json_answer_description']}.",
     "interview_agent_response_format": {"type": "text", "mime_type": "application/json", "schema": InterviewAgentResponse.model_json_schema()},

@@ -79,6 +79,7 @@ available_agents = ['interview_agent', 'planner_agent',]
 if prompt := st.chat_input("Type text here") or st.session_state.previous_response_type in modelReponses:    
     # If user has send a prompt
     if prompt != None and prompt != True:
+        print(f"USER: {prompt}")
         logger.log_user_messages(prompt)
         send_msg(role="user", text=prompt)
         st.session_state.answer_history.append(f"USER PROMPT: {prompt}")
@@ -117,13 +118,13 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         st.rerun()
     # If interview agent was chosen
     elif st.session_state.current_agent == 'interview_agent':
-        interaction, state = st.session_state.interview_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process,)
+        interaction = st.session_state.interview_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process,)
     # If planner agent was chosen
     elif st.session_state.current_agent == 'planner_agent':
-        interaction, state = st.session_state.planner_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process,)
+        interaction = st.session_state.planner_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process,)
     # If tracking agent was chosen
     elif st.session_state.current_agent == 'tracking_agent':
-        interaction, state = st.session_state.tracking_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process,)
+        interaction = st.session_state.tracking_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process,)
 
     print(f"Agent {st.session_state.current_agent} response: ", interaction)
 
