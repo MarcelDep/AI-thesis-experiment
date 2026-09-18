@@ -32,10 +32,13 @@ def switch_agent(answer_history, current_ReAct_history, interview_agent_state, p
 def get_commit_messages(owner, repo, token):
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",}
     response = requests.get(f'https://api.github.com/repos/{owner}/{repo}/commits', headers).json()
-    commit_messages = [commit["commit"]["message"] for commit in response]
+    print(response)
+    commit_messages = [commit.commit.message for commit in response]
+    print(f"COMMIT MESSAGES: {commit_messages}")
     return commit_messages
 
 def get_commit_diff(owner, repo, token, base_sha, head_sha):
+    print("WTFFF")
     basehead = f"{base_sha}...{head_sha}"
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github.diff",}
     response = requests.get(f'https://api.github.com/repos/{owner}/{repo}/compare/{basehead}', headers).json()
@@ -63,10 +66,9 @@ def orchiestrator(prompt, answer_history, current_ReAct_history, interview_agent
     decision = config.OrchestratorResponse.model_validate_json(interaction.output_text)
     logger.log_orchestrator_activity(decision.agent, decision.justification)
     print("Agent chosed by an orchestrator: ", decision)
-
     return decision
 
-class Agent(ABC):
+class Agent:
     def response(self, prompt, answer_history, current_ReAct_history,):
         print(f"Agent {self.agent_type} sees following state before response: {self.state}.")
         print(f"Agent {self.agent_type} sees following ReAct history as a context: {current_ReAct_history}.")        

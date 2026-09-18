@@ -14,8 +14,6 @@ load_dotenv()
 
 st.title("Project Management Agent")
 
-st.session_state.github_repo = st.sidebar.text_input("Enter your GitHub repo in 'owner/repo' format.")
-
 print('================START================')
 
 client = genai.Client()
@@ -52,13 +50,17 @@ if "planner_agent_instance" not in st.session_state:
 if "tracking_agent_instance" not in st.session_state:
     st.session_state.tracking_agent_instance = agents.TrackingAgent()
 
-if "github_user" not in st.session_state:
-    token = os.getenv("GITHUB_PAT")
-    g = Github(token)
-    st.session_state.github_user = g.get_user()
+if "github_token" not in st.session_state:
+    st.session_state.github_token = os.getenv("GITHUB_PAT")
 
-if "last_checked_commit" not in st.session_state:
-    st.session_state.last_checked_commit = ''
+if "github_repo" not in st.session_state:
+    st.session_state.github_repo = ""
+
+if "github_owner" not in st.session_state:
+    st.session_state.github_owner = ""
+
+st.session_state.github_repo = st.sidebar.text_input("GitHub repo", value=st.session_state.github_repo)
+st.session_state.github_owner = st.sidebar.text_input("GitHub owner", value=st.session_state.github_owner)
 
 if "switch_agent_called" not in st.session_state:
     st.session_state.switch_agent_called = False
@@ -75,8 +77,8 @@ def send_msg(role, text):
 
 # Variables
 modelReponses = ['thought', 'action',] 
-tools = ['current_date', 'user_location', 'switch_agent',]
-available_agents = ['interview_agent', 'planner_agent',]
+tools = ['current_date', 'user_location', 'switch_agent', 'get_commit_messages', 'get_commit_diff',]
+available_agents = ['interview_agent', 'planner_agent', 'tracking_agent',]
 
 # Trigger when user has send a prompt or when previous message has been a thought or an action
 if prompt := st.chat_input("Type text here") or st.session_state.previous_response_type in modelReponses:    
@@ -111,6 +113,9 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
             prompt = f"Continue based on conversation history. Orchestration decision with justification: {orchestrator_decision}"
         else:
             prompt = f"You have been selected by the orchestrator to respond. Continue the conversation directly. Do NOT call switch_agent."
+    elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'get_commit_messages':
+        commit_messages = agents.get_commit_messages(owner=st.session_state.github_owner, repo=st.session_state.github_repo, token=st.session_state.github_token)
+        prompt = f"get_commit_messages tool RESPONSE: {commit_messages}"
     # Else - call an error
     else:
         error_msg = f"ERROR: {st.session_state.previous_response_type}"
@@ -124,6 +129,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         st.session_state.previous_response_type = "ERROR"
         logger.log_errors(error_msg)
         st.rerun()
+    # Czy da się jakoś pozbyć tej ściany ifów?
     # If interview agent was chosen
     elif st.session_state.current_agent == 'interview_agent':
         interaction = st.session_state.interview_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process,)

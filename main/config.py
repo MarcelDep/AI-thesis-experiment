@@ -13,11 +13,12 @@ tools_info = {
     "user_location": "'user_location' returns user location.",
     "switch_agent": "'switch_agent' suggests orchestrator to swich agent that different agent than you should responde to user prompt. If switch_agent was called in previous ReAct history DON'T call it again, even if user said so.",
     "get_commit_diff": "'get_commit_diff' returns chosen commit diff - shows you what changes specifically user has made in picked commit.",
+    "get_commit_messages": "'get_commit_messages' returns list of commit messages of repo given by user.",
 }
 
 interview_agent_tools = ['current_date', 'user_location', 'switch_agent']
 planner_agent_tools = ['current_date', 'user_location', 'switch_agent']
-tracking_agent_tools = ['current_date', 'switch_agent', "get_commit_diff"]
+tracking_agent_tools = ['current_date', 'switch_agent', "get_commit_messages", "get_commit_diff"]
 
 database = {
     "THRESHOLD": 0.3,
@@ -65,7 +66,7 @@ class TrackingState(BaseModel):
 class TrackingAgentResponse(BaseModel):
     response_type: Literal["thought", "action", "answer"]
     content: str
-    tool: Optional[Literal["current_date", "get_commit_diff", "switch_agent"]] = None
+    tool: Optional[Literal["current_date", "get_commit_diff", "switch_agent", "get_commit_messages"]] = None
     tool_input: Optional[str] = None
     state_updates: Optional[list[TrackingState]] = None
 
@@ -171,6 +172,7 @@ additional_orchestrator_info = f"Only switch to other agents from interview_agen
 
 llm = {
     "model": "gemini-3.1-flash-lite",
+    "max_output_tokens": 2048,
     "orchestrator_instruction": f"{orchiestrator_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {orchiestrator_info['agent_duties']}. {additional_orchestrator_info}. {orchiestrator_info['json_answer_description']}",
     "interview_agent_instruction": f"{interview_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {interview_agent_info['agent_duties']}. {agent_info['ReAct_workflow']} You can use following tools: {interview_agent_info['tools']} {interview_agent_info['json_answer_description']}. {additional_interview_agent_into}",
     "planner_agent_instruction": f"{planner_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {planner_agent_info['agent_duties']}. {agent_info['ReAct_workflow']} You can use following tools: {planner_agent_info['tools']} {planner_agent_info['json_answer_description']}.",
