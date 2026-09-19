@@ -57,18 +57,23 @@ class OrchestratorResponse(BaseModel):
     agent: Literal["interview_agent", "planner_agent", "tracking_agent"]
     justification: str = ""
 
-class TrackingState(BaseModel):
+class TaskStatus(BaseModel):
     task_name: str = ''
     status: Literal["done", "in_progress", "not_started"] = 'not_started'
     justification: str = ''
     confidence: float = 0.0
+
+# Czy da rade jakoś zrobić, żeby zadania w tracking state to były zadania od plannera a w przypadku zmiany zadan w tracking zmianialo sie tez w planner
+class TrackingState(BaseModel):
+    tasks_status: list[TaskStatus] = []
+    extra_content: str = ""
 
 class TrackingAgentResponse(BaseModel):
     response_type: Literal["thought", "action", "answer"]
     content: str
     tool: Optional[Literal["current_date", "get_commit_diff", "switch_agent", "get_commit_messages"]] = None
     tool_input: Optional[str] = None
-    state_updates: Optional[list[TrackingState]] = None
+    state_updates: Optional[TrackingState] = None
 
 INTERVIEW_AGENT_RESPONSE_DESCRIPTION = f"""
 You must respond in JSON format with the following fields:
@@ -110,7 +115,7 @@ You must respond in JSON format with the following fields:
 - "content": your actual response text — reasoning in thought, tool call description in action, or summary assessment in answer
 - "tool": only when response_type is "action", one of: {[tools_info[tool] for tool in tracking_agent_tools]}. Otherwise null.
 - "tool_input": only when response_type is "action" and tool is "get_commit_diff" — provide the commit SHA you want to inspect. Otherwise null.
-- "state_updates": only when response_type is "answer" — provide a list of task assessments, one per planned task.
+- "state_up dates": only when response_type is "answer" — provide a list of task assessments, one per planned task.
     - "task_name": exact name of the task from the project plan
     - "status": one of "done", "in_progress", or "not_started" based on commit evidence
     - "justification": brief explanation of why you assigned this status, referencing specific commits where possible

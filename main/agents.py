@@ -31,14 +31,12 @@ def switch_agent(answer_history, current_ReAct_history, interview_agent_state, p
 
 def get_commit_messages(owner, repo, token):
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",}
-    response = requests.get(f'https://api.github.com/repos/{owner}/{repo}/commits', headers).json()
-    print(response)
-    commit_messages = [commit.commit.message for commit in response]
+    response = requests.get(f'https://api.github.com/repos/{owner}/{repo}/commits', headers=headers).json()
+    commit_messages = [commit["commit"]["message"]  for commit in response]
     print(f"COMMIT MESSAGES: {commit_messages}")
     return commit_messages
 
 def get_commit_diff(owner, repo, token, base_sha, head_sha):
-    print("WTFFF")
     basehead = f"{base_sha}...{head_sha}"
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github.diff",}
     response = requests.get(f'https://api.github.com/repos/{owner}/{repo}/compare/{basehead}', headers).json()
@@ -80,6 +78,7 @@ class Agent:
                                     system_instruction=self.system_prompt, 
                                     response_format=self.response_format)
         response = self.validate_json(interaction.output_text)        
+        print(response)
         if response.state_updates is not None:
             self.state = self.state.model_copy(update=response.state_updates.model_dump(exclude_defaults=True))
         print(f"{self.agent_type} state after response: {self.state}")   
