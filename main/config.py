@@ -12,8 +12,8 @@ tools_info = {
     "current_date": "'current_date' returns current date - day, month and year in YYYY-MM-DD format. Use it if user gives you a deadline.",
     "user_location": "'user_location' returns user location.",
     "switch_agent": "'switch_agent' suggests orchestrator to swich agent that different agent than you should responde to user prompt. If switch_agent was called in previous ReAct history DON'T call it again, even if user said so.",
-    "get_commit_diff": "'get_commit_diff' returns chosen commit diff - shows you what changes specifically user has made in picked commit.",
-    "get_commit_messages": "'get_commit_messages' returns list of commit messages of repo given by user.",
+    "get_commit_diff": "'get_commit_diff' returns chosen commit diff - shows you what changes specifically user has made in picked commit. Before using this tool you have to gather SHA of commits you want to diff and set them as base_sha and head_sha parameters.",
+    "get_commit_messages": "'get_commit_messages' returns list of commit messages and their sha of repo given by user.",
 }
 
 interview_agent_tools = ['current_date', 'user_location', 'switch_agent']
@@ -63,16 +63,22 @@ class TaskStatus(BaseModel):
     justification: str = ''
     confidence: float = 0.0
 
+class CommitsMsgSha(BaseModel):
+    commit_message: str = ''
+    commit_sha: str = ''
+
 # Czy da rade jakoś zrobić, żeby zadania w tracking state to były zadania od plannera a w przypadku zmiany zadan w tracking zmianialo sie tez w planner
 class TrackingState(BaseModel):
     tasks_status: list[TaskStatus] = []
+    commits_msg_sha: Optional[list[CommitsMsgSha]] = []
+    base_sha: Optional[str] = None
+    head_sha: Optional[str] = None
     extra_content: str = ""
 
 class TrackingAgentResponse(BaseModel):
     response_type: Literal["thought", "action", "answer"]
     content: str
     tool: Optional[Literal["current_date", "get_commit_diff", "switch_agent", "get_commit_messages"]] = None
-    tool_input: Optional[str] = None
     state_updates: Optional[TrackingState] = None
 
 INTERVIEW_AGENT_RESPONSE_DESCRIPTION = f"""
@@ -114,12 +120,15 @@ You must respond in JSON format with the following fields:
     - "answer": use when delivering your final progress assessment to the user
 - "content": your actual response text — reasoning in thought, tool call description in action, or summary assessment in answer
 - "tool": only when response_type is "action", one of: {[tools_info[tool] for tool in tracking_agent_tools]}. Otherwise null.
-- "tool_input": only when response_type is "action" and tool is "get_commit_diff" — provide the commit SHA you want to inspect. Otherwise null.
-- "state_up dates": only when response_type is "answer" — provide a list of task assessments, one per planned task.
+- "tool_input": only when response_type is "action" and tool is "get_commit_diff" — provide the base and head commit SHA you want to compare. Otherwise null.
+- "state_updates": only when response_type is "answer" — provide a list of task assessments, one per planned task.
     - "task_name": exact name of the task from the project plan
     - "status": one of "done", "in_progress", or "not_started" based on commit evidence
     - "justification": brief explanation of why you assigned this status, referencing specific commits where possible
     - "confidence": float between 0.0 and 1.0 indicating how confident you are in this assessment — lower when commit messages are vague or diffs weren't inspected, higher when code changes clearly match task requirements
+    - "commits_msg_sha": list of commit messages and their SHA acquired from GitHub by get_commit_messages function 
+    - "base_sha": only when response_type is "action" and tool is "get_commit_diff" — provide the base you want to compare
+    - "head_sha": only when response_type is "action" and tool is "get_commit_diff" — provide the head you want to compare
 """
 
 ORCHESTRATOR_RESPONSE_DESCRIPTION = f"""

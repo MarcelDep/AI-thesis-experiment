@@ -1,6 +1,7 @@
 import  os
 import  rag
 import  json
+import  tools
 import  agents
 import  logger
 import  streamlit                          as st
@@ -41,13 +42,9 @@ if "current_thinking_process" not in st.session_state:
 if "error_retry_count" not in st.session_state:
     st.session_state.error_retry_count = 0
 
-if "interview_agent_instance" not in st.session_state:
+if "agents" not in st.session_state:
     st.session_state.interview_agent_instance = agents.InterviewAgent()
-
-if "planner_agent_instance" not in st.session_state:
     st.session_state.planner_agent_instance = agents.PlannerAgent()
-
-if "tracking_agent_instance" not in st.session_state:
     st.session_state.tracking_agent_instance = agents.TrackingAgent()
 
 if "github_token" not in st.session_state:
@@ -98,24 +95,27 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         prompt = "NOT USER RESPONSE: Continue response based on conversation history."
     # If model previous message has been an action - more specifically current_date tool call
     elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'current_date':
-        date = agents.current_date()
+        date = tools.current_date()
         prompt = f"current_date tool RESPONSE: {date}"
     # If model previous message has been an action - more specifically user_location tool call
     elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'user_location':
-        location = agents.user_location()
+        location = tools.user_location()
         prompt = f"user_location tool RESPONSE: {location}"
     # If model previous message has been an action - more specifically switch_agent tool call
     elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'switch_agent':
         if st.session_state.switch_agent_called == False:
             st.session_state.switch_agent_called = True
-            orchestrator_decision = agents.switch_agent(answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, interview_agent_state=st.session_state.interview_agent_instance.state, planner_agent_state=st.session_state.planner_agent_instance.state)
+            orchestrator_decision = tools.switch_agent(answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, interview_agent_state=st.session_state.interview_agent_instance.state, planner_agent_state=st.session_state.planner_agent_instance.state)
             st.session_state.current_agent = orchestrator_decision.agent
             prompt = f"Continue based on conversation history. Orchestration decision with justification: {orchestrator_decision}"
         else:
             prompt = f"You have been selected by the orchestrator to respond. Continue the conversation directly. Do NOT call switch_agent."
     elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'get_commit_messages':
-        commit_messages = agents.get_commit_messages(owner=st.session_state.github_owner, repo=st.session_state.github_repo, token=st.session_state.github_token)
+        commit_messages = tools.get_commit_messages(owner=st.session_state.github_owner, repo=st.session_state.github_repo, token=st.session_state.github_token)
         prompt = f"get_commit_messages tool RESPONSE: {commit_messages}"
+    elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'get_commit_diff':
+        commit_diff = tools.get_commit_diff(owner=st.session_state.github_owner, repo=st.session_state.github_repo, token=st.session_state.github_token, base_sha=st.session_state.tracking_agent_instance.base_sha, head_sha=st.session_state.tracking_agent_instance.head_sha)
+ 
     # Else - call an error
     else:
         error_msg = f"ERROR: {st.session_state.previous_response_type}"

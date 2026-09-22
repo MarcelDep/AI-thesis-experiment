@@ -13,35 +13,7 @@ client = genai.Client()
 
 chunk_collection = rag.database_init()
 
-def current_date():
-    today = date.today()
-    print(today)
-    return today
-
-def user_location():
-    location = geocoder.ip('me')
-    print(location)
-    return location.latlng
-
-# Rozwiąż problem manualnego dodawania agentów do promtpa - słownik z statusem kazdego agenta?
-def switch_agent(answer_history, current_ReAct_history, interview_agent_state, planner_agent_state):
-    prompt = "Current agent decided that different agent should responde right now. Review conversation and make a decision which agent should respond."
-    orchestrator_decision = orchiestrator(prompt=prompt, answer_history=answer_history, current_ReAct_history=current_ReAct_history, interview_agent_state=interview_agent_state, planner_agent_state=planner_agent_state)
-    return orchestrator_decision
-
-def get_commit_messages(owner, repo, token):
-    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",}
-    response = requests.get(f'https://api.github.com/repos/{owner}/{repo}/commits', headers=headers).json()
-    commit_messages = [commit["commit"]["message"]  for commit in response]
-    print(f"COMMIT MESSAGES: {commit_messages}")
-    return commit_messages
-
-def get_commit_diff(owner, repo, token, base_sha, head_sha):
-    basehead = f"{base_sha}...{head_sha}"
-    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github.diff",}
-    response = requests.get(f'https://api.github.com/repos/{owner}/{repo}/compare/{basehead}', headers).json()
-    changes = [[file["filename"], file["patch"]] for file in response["files"]] 
-    return changes
+# Może dodaj state każdego agenta jako kontekst przy jego odpowiadaniu?
 
 def agent_response(prompt, answer_history, current_ReAct_history, agent_state, agent_type, system_instruction, response_format):
     interaction = client.interactions.create(
