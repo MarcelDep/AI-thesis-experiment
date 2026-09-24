@@ -70,7 +70,7 @@ class CommitsMsgSha(BaseModel):
 # Czy da rade jakoś zrobić, żeby zadania w tracking state to były zadania od plannera a w przypadku zmiany zadan w tracking zmianialo sie tez w planner
 class TrackingState(BaseModel):
     tasks_status: list[TaskStatus] = []
-    commits_msg_sha: Optional[list[CommitsMsgSha]] = []
+    commits_msg_sha: list[CommitsMsgSha] = []
     base_sha: Optional[str] = None
     head_sha: Optional[str] = None
     extra_content: str = ""

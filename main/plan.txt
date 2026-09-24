@@ -62,3 +62,5 @@ DeveloperAgent would reciev:
 2. actuall code changes as a tool 
 3. Ideally i would like to have a option to login to GitHub in app as in e.g. vscode
 4. Per-status seems fine, text justification and confidence score will be useful too
+
+Fajnie by bylo jakby tracking agent po cichu w tle sprawdzał stan zadan na github - jezeli nowy commit to aktualizowana jest lista zadan i ich status 

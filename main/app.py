@@ -74,7 +74,7 @@ def send_msg(role, text):
 
 # Variables
 modelReponses = ['thought', 'action',] 
-tools = ['current_date', 'user_location', 'switch_agent', 'get_commit_messages', 'get_commit_diff',]
+available_tools = ['current_date', 'user_location', 'switch_agent', 'get_commit_messages', 'get_commit_diff',]
 available_agents = ['interview_agent', 'planner_agent', 'tracking_agent',]
 
 # Trigger when user has send a prompt or when previous message has been a thought or an action
