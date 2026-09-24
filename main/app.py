@@ -42,9 +42,13 @@ if "current_thinking_process" not in st.session_state:
 if "error_retry_count" not in st.session_state:
     st.session_state.error_retry_count = 0
 
-if "agents" not in st.session_state:
+if "interview_agent_instance" not in st.session_state:
     st.session_state.interview_agent_instance = agents.InterviewAgent()
+
+if "planner_agent_instance" not in st.session_state:
     st.session_state.planner_agent_instance = agents.PlannerAgent()
+
+if "tracking_agent_instance" not in st.session_state:
     st.session_state.tracking_agent_instance = agents.TrackingAgent()
 
 if "github_token" not in st.session_state:

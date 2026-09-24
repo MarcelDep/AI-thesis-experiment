@@ -64,3 +64,14 @@ DeveloperAgent would reciev:
 4. Per-status seems fine, text justification and confidence score will be useful too
 
 Fajnie by bylo jakby tracking agent po cichu w tle sprawdzał stan zadan na github - jezeli nowy commit to aktualizowana jest lista zadan i ich status 
+
+Test prompt:
+1. Hi i want to build an AI powered app for project management - it will be peoples (ideally in IT) project manager on their own projects
+2. 
+Technologies: LangChain, OpenAI API, Python
+Deadline: 6 months
+Working style: I prefer to work in scrum 2 weeks per sprint
+Reqiurements: GitHub API intergation for task status checking, task scheduling and Code Review
+Region: Poland
+3. I've done some progress - check out my github
+4. 
