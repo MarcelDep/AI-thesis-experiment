@@ -49,13 +49,26 @@ class Agent:
                                     agent_type=self.agent_type, 
                                     system_instruction=self.system_prompt, 
                                     response_format=self.response_format)
-        response = self.validate_json(interaction.output_text)        
-        print(response)
-        if response.state_updates is not None:
-            self.state = self.state.model_copy(update=response.state_updates.model_dump(exclude_defaults=True))
-        print(f"{self.agent_type} state after response: {self.state}")   
+        response = self.validate_response(interaction.output_text)        
+        if response.response_type == 'answer':
+            self.extract_state(answer_history=answer_history, current_ReAct_history=current_ReAct_history)  
+            print(f"Agent {self.agent_type} sees following state after response: {self.state}.")
         logger.log_agent_activity(f"{self.agent_type}", response.response_type, response.content, self.state)
         return response
+
+    def extract_state(self, answer_history, current_ReAct_history):
+        prompt = f"Given this conversation and the latest answer, extract any information relevant to: {self.state.model_fields.keys()}, that was discussed. Return only what's explicitly stated."
+        system_instruction = "You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
+        interaction = agent_response(prompt=prompt,
+                                    answer_history=answer_history, 
+                                    current_ReAct_history=[current_ReAct_history], 
+                                    agent_state=self.state, 
+                                    agent_type=self.agent_type, 
+                                    system_instruction=system_instruction, 
+                                    response_format=self.extract_format)
+        response = self.validate_extraction(interaction.output_text)     
+        self.state = self.state.model_copy(update=response.model_dump(exclude_defaults=True))
+        print(f"{self.agent_type} state extraction: {self.state}")
 
 class InterviewAgent(Agent):
     def __init__(self,):
@@ -63,21 +76,9 @@ class InterviewAgent(Agent):
         self.state = config.InterviewState()
         self.system_prompt = config.llm['interview_agent_instruction']
         self.response_format = config.llm["interview_agent_response_format"]
-        self.validate_json = config.InterviewAgentResponse.model_validate_json
-
-    def extract_state(self, answer_history, ):
-        prompt = "Given this conversation and the latest answer, extract any project information that was discussed. Return only what's explicitly stated."
-        system_instruction = "You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
-        interaction = agent_response(prompt=prompt,
-                                    answer_history=answer_history, 
-                                    current_ReAct_history="", 
-                                    agent_state=self.state, 
-                                    agent_type=self.agent_type, 
-                                    system_instruction=system_instruction, 
-                                    response_format={"type": "text", "mime_type": "application/json", "schema": config.InterviewState.model_json_schema()})
-        response = config.InterviewState.model_validate_json(interaction.output_text)     
-        self.state = self.state.model_copy(update=response.model_dump(exclude_defaults=True))
-        print(f"Extraction: {self.agent_type} state {self.state}")   
+        self.validate_response = config.InterviewAgentResponse.model_validate_json  
+        self.extract_format = config.llm['interview_agent_extraction_format'] 
+        self.validate_extraction = config.InterviewState.model_validate_json
 
 class PlannerAgent(Agent):
     def __init__(self,):
@@ -85,7 +86,9 @@ class PlannerAgent(Agent):
         self.state = config.PlannerState()
         self.system_prompt = config.llm['planner_agent_instruction']
         self.response_format = config.llm["planner_agent_response_format"]
-        self.validate_json = config.PlannerAgentResponse.model_validate_json
+        self.validate_response = config.PlannerAgentResponse.model_validate_json
+        self.extract_format = config.llm['planner_agent_extraction_format'] 
+        self.validate_extraction = config.PlannerState.model_validate_json
 
 class TrackingAgent(Agent):
     def __init__(self,):
@@ -93,6 +96,8 @@ class TrackingAgent(Agent):
         self.state = config.TrackingState()
         self.system_prompt = config.llm['tracking_agent_instruction']
         self.response_format = config.llm["tracking_agent_response_format"]
-        self.validate_json = config.TrackingAgentResponse.model_validate_json
+        self.validate_response = config.TrackingAgentResponse.model_validate_json
+        self.extract_format = config.llm['tracking_agent_extraction_format'] 
+        self.validate_extraction = config.TrackingState.model_validate_json
 
 # Dodaj wymuszenie stworzenia wszystkich powyzszych selfow w kazdej klasie agent za pomoca @abstractmethod

@@ -16,7 +16,7 @@ def user_location():
 # Rozwiąż problem manualnego dodawania agentów do promtpa - słownik z statusem kazdego agenta?
 def switch_agent(answer_history, current_ReAct_history, interview_agent_state, planner_agent_state):
     prompt = "Current agent decided that different agent should responde right now. Review conversation and make a decision which agent should respond."
-    orchestrator_decision = orchiestrator(prompt=prompt, answer_history=answer_history, current_ReAct_history=current_ReAct_history, interview_agent_state=interview_agent_state, planner_agent_state=planner_agent_state)
+    orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=answer_history, current_ReAct_history=current_ReAct_history, interview_agent_state=interview_agent_state, planner_agent_state=planner_agent_state)
     return orchestrator_decision
 
 def get_commit_messages(owner, repo, token):

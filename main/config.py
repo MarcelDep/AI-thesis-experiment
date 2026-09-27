@@ -107,7 +107,7 @@ You must respond in JSON format with the following fields:
     - "answer": use when responding directly to the user
 - "content": your actual response text — thought, action reasoning, or answer to user
 - "tool": only when response_type is "action", one of: {[tools_info[tool] for tool in planner_agent_tools]}. Otherwise null.
-- "state_updates": populate this field on every "answer" turn where you have produced or refined a task breakdown. Include the complete current task list, not just new additions.
+- "state_updates": - "state_updates": ALWAYS populate on every "answer" turn with the complete current task list. Never return null or empty tasks on an answer turn where you described any tasks. Every task mentioned in content must appear here structured with name and deadline.
     - "tasks": list of task objects, each with "name" (task name) and "deadline" (task deadline, empty string if unknown)
     - "extra_content": anything else relevant about the plan
 """
@@ -195,4 +195,7 @@ llm = {
     "planner_agent_response_format":  {"type": "text", "mime_type": "application/json", "schema": PlannerAgentResponse.model_json_schema()},
     "orchestrator_response_format":  {"type": "text", "mime_type": "application/json", "schema": OrchestratorResponse.model_json_schema()},
     "tracking_agent_response_format": {"type": "text", "mime_type": "application/json", "schema": TrackingAgentResponse.model_json_schema()},
+    "interview_agent_extraction_format": {"type": "text", "mime_type": "application/json", "schema": InterviewState.model_json_schema()},
+    "planner_agent_extraction_format":  {"type": "text", "mime_type": "application/json", "schema": PlannerState.model_json_schema()},
+    "tracking_agent_extraction_format": {"type": "text", "mime_type": "application/json", "schema": TrackingState.model_json_schema()},    
 }
