@@ -50,7 +50,7 @@ class Agent:
                                     system_instruction=self.system_prompt, 
                                     response_format=self.response_format)
         response = self.validate_response(interaction.output_text)        
-        if response.response_type == 'answer':
+        if response.response_type == 'answer' and self.agent_type != 'interview_agent':
             self.extract_state(answer_history=answer_history, current_ReAct_history=current_ReAct_history)  
             print(f"Agent {self.agent_type} sees following state after response: {self.state}.")
         logger.log_agent_activity(f"{self.agent_type}", response.response_type, response.content, self.state)

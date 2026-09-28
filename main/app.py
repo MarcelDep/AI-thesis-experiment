@@ -119,7 +119,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         prompt = f"get_commit_messages tool RESPONSE: {commit_messages}"
     elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'get_commit_diff':
         commit_diff = tools.get_commit_diff(owner=st.session_state.github_owner, repo=st.session_state.github_repo, token=st.session_state.github_token, base_sha=st.session_state.tracking_agent_instance.base_sha, head_sha=st.session_state.tracking_agent_instance.head_sha)
- 
+        prompt = f"get_commit_diif tool RESPONSE: {commit_messages}"
     # Else - call an error
     else:
         error_msg = f"ERROR: {st.session_state.previous_response_type}"
