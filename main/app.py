@@ -80,6 +80,7 @@ def send_msg(role, text):
 modelReponses = ['thought', 'action',] 
 available_tools = ['current_date', 'user_location', 'switch_agent', 'get_commit_messages', 'get_commit_diff',]
 available_agents = ['interview_agent', 'planner_agent', 'tracking_agent',]
+additional_context = {"interview_agent": [], 'planner_agent': st.session_state.interview_agent_instance.state, 'tracking_agent': st.session_state.planner_agent_instance.state,}
 
 # Trigger when user has send a prompt or when previous message has been a thought or an action
 if prompt := st.chat_input("Type text here") or st.session_state.previous_response_type in modelReponses:    
@@ -136,13 +137,13 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
     # Czy da się jakoś pozbyć tej ściany ifów?
     # If interview agent was chosen
     elif st.session_state.current_agent == 'interview_agent':
-        interaction = st.session_state.interview_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process,)
+        interaction = st.session_state.interview_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, additional_context=additional_context[st.session_state.current_agent])
     # If planner agent was chosen
     elif st.session_state.current_agent == 'planner_agent':
-        interaction = st.session_state.planner_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process,)
+        interaction = st.session_state.planner_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, additional_context=additional_context[st.session_state.current_agent])
     # If tracking agent was chosen
     elif st.session_state.current_agent == 'tracking_agent':
-        interaction = st.session_state.tracking_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process,)
+        interaction = st.session_state.tracking_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, additional_context=additional_context[st.session_state.current_agent])
 
     print(f"Agent {st.session_state.current_agent} response: ", interaction)
 

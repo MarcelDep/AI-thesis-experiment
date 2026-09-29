@@ -49,7 +49,6 @@ Przekazuj wspólne parametry jako class/list a nie z osobna
 Zastąp funkcją cały łańcuch if/elif/else sprawdzający typ wiadomości w app.py
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 Information that i need from  GitHub:
 - commits (history and newest)
 - Read-Only 

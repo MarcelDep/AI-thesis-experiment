@@ -35,11 +35,9 @@ class InterviewState(BaseModel):
     technologies: str = ""
     requirements: str = ""
     working_style: str = ""
-    extra_content: str = ""
     
 class PlannerState(BaseModel):
     tasks: list[Task] = []
-    extra_content: str = ""
 
 class InterviewAgentResponse(BaseModel):
     response_type: Literal["thought", "action", "answer"]
@@ -73,7 +71,6 @@ class TrackingState(BaseModel):
     commits_msg_sha: list[CommitsMsgSha] = []
     base_sha: Optional[str] = None
     head_sha: Optional[str] = None
-    extra_content: str = ""
 
 class TrackingAgentResponse(BaseModel):
     response_type: Literal["thought", "action", "answer"]
@@ -96,7 +93,6 @@ You must respond in JSON format with the following fields:
     - "technologies": preferred tech stack
     - "requirements": specific project requirements
     - "working_style": how the user prefers to work
-    - "extra_content": anything else relevant that doesn't fit above fields
 """
 
 PLANNER_AGENT_RESPONSE_DESCRIPTION = f"""
@@ -107,9 +103,8 @@ You must respond in JSON format with the following fields:
     - "answer": use when responding directly to the user
 - "content": your actual response text — thought, action reasoning, or answer to user
 - "tool": only when response_type is "action", one of: {[tools_info[tool] for tool in planner_agent_tools]}. Otherwise null.
-- "state_updates": - "state_updates": ALWAYS populate on every "answer" turn with the complete current task list. Never return null or empty tasks on an answer turn where you described any tasks. Every task mentioned in content must appear here structured with name and deadline.
+- "state_updates": ALWAYS populate on every "answer" turn with the complete current task list. Never return null or empty tasks on an answer turn where you described any tasks. Every task mentioned in content must appear here structured with name and deadline.
     - "tasks": list of task objects, each with "name" (task name) and "deadline" (task deadline, empty string if unknown)
-    - "extra_content": anything else relevant about the plan
 """
 
 TRACKING_AGENT_RESPONSE_DESCRIPTION = f"""

@@ -15,11 +15,12 @@ chunk_collection = rag.database_init()
 
 # Może dodaj state każdego agenta jako kontekst przy jego odpowiadaniu?
 
-def agent_response(prompt, answer_history, current_ReAct_history, agent_state, agent_type, system_instruction, response_format):
+def agent_response(prompt, answer_history, current_ReAct_history, agent_state, agent_type, system_instruction, response_format, additional_context):
+    print("SIGMA 3000: ", additional_context)
     interaction = client.interactions.create(
         model = config.llm["model"],
         system_instruction = system_instruction,
-        input = f'CONVERSATION HISTORY: {answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {current_ReAct_history} | RAG CONTEXT: {chunk_collection.query(query_texts=prompt, n_results=3)} | AGENT STATE: {agent_state} | PROMPT: {prompt}',
+        input = f'CONVERSATION HISTORY: {answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {current_ReAct_history} | RAG CONTEXT: {chunk_collection.query(query_texts=prompt, n_results=3)} | AGENT STATE: {agent_state} | ADDITIONAL CONTEXT: {additional_context} | PROMPT: {prompt}',
         response_format = response_format,
     )
     return interaction
@@ -39,7 +40,7 @@ def orchiestrator(prompt, answer_history, current_ReAct_history, interview_agent
     return decision
 
 class Agent:
-    def response(self, prompt, answer_history, current_ReAct_history,):
+    def response(self, prompt, answer_history, current_ReAct_history, additional_context):
         print(f"Agent {self.agent_type} sees following state before response: {self.state}.")
         print(f"Agent {self.agent_type} sees following ReAct history as a context: {current_ReAct_history}.")        
         interaction = agent_response(prompt=prompt, 
@@ -48,11 +49,11 @@ class Agent:
                                     agent_state=self.state, 
                                     agent_type=self.agent_type, 
                                     system_instruction=self.system_prompt, 
-                                    response_format=self.response_format)
+                                    response_format=self.response_format,
+                                    additional_context=additional_context)
         response = self.validate_response(interaction.output_text)        
-        if response.response_type == 'answer' and self.agent_type != 'interview_agent':
-            self.extract_state(answer_history=answer_history, current_ReAct_history=current_ReAct_history)  
-            print(f"Agent {self.agent_type} sees following state after response: {self.state}.")
+        if (response.response_type == 'answer' and self.agent_type != 'interview_agent') or (response.response_type == 'action' and self.agent_type != 'tracking_agent'):
+            self.extract_state(answer_history=answer_history, current_ReAct_history=current_ReAct_history)
         logger.log_agent_activity(f"{self.agent_type}", response.response_type, response.content, self.state)
         return response
 
@@ -65,7 +66,8 @@ class Agent:
                                     agent_state=self.state, 
                                     agent_type=self.agent_type, 
                                     system_instruction=system_instruction, 
-                                    response_format=self.extract_format)
+                                    response_format=self.extract_format,
+                                    additional_context=[])
         response = self.validate_extraction(interaction.output_text)     
         self.state = self.state.model_copy(update=response.model_dump(exclude_defaults=True))
         print(f"{self.agent_type} state extraction: {self.state}")
