@@ -72,5 +72,6 @@ Deadline: 6 months
 Working style: I prefer to work in scrum 2 weeks per sprint
 Reqiurements: GitHub API intergation for task status checking, task scheduling and Code Review
 Region: Poland
-3. I've done some progress - check out my github
-4. 
+3. Plan me something
+4. I've done some progress - check out my github
+5. Track my progress again

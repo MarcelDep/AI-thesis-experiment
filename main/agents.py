@@ -16,12 +16,14 @@ chunk_collection = rag.database_init()
 # Może dodaj state każdego agenta jako kontekst przy jego odpowiadaniu?
 
 def agent_response(prompt, answer_history, current_ReAct_history, agent_state, agent_type, system_instruction, response_format, additional_context):
-    print("SIGMA 3000: ", additional_context)
     interaction = client.interactions.create(
         model = config.llm["model"],
         system_instruction = system_instruction,
         input = f'CONVERSATION HISTORY: {answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {current_ReAct_history} | RAG CONTEXT: {chunk_collection.query(query_texts=prompt, n_results=3)} | AGENT STATE: {agent_state} | ADDITIONAL CONTEXT: {additional_context} | PROMPT: {prompt}',
         response_format = response_format,
+        generation_config={
+            "max_output_tokens": config.llm["max_output_tokens"],
+        },
     )
     return interaction
 
@@ -32,17 +34,21 @@ def orchiestrator(prompt, answer_history, current_ReAct_history, interview_agent
         system_instruction = config.llm["orchestrator_instruction"],
         input = f'CONVERSATION HISTORY: {answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {current_ReAct_history}, INTERVIEW AGENT STATE: {interview_agent_state}, PLANNER AGENT STATE: {planner_agent_state}, PROMPT: {prompt}',
         response_format = config.llm["orchestrator_response_format"],
+        generation_config={
+            "max_output_tokens": config.llm["max_output_tokens"],
+        },
     )
 
     decision = config.OrchestratorResponse.model_validate_json(interaction.output_text)
     logger.log_orchestrator_activity(decision.agent, decision.justification)
-    print("Agent chosed by an orchestrator: ", decision)
+    print(f"----ORCHESTRATOR choosed agent: { decision}")
+    print(f"----ORCHESTRATOR decision process used {interaction.usage.total_output_tokens} tokens.")
     return decision
 
 class Agent:
     def response(self, prompt, answer_history, current_ReAct_history, additional_context):
-        print(f"Agent {self.agent_type} sees following state before response: {self.state}.")
-        print(f"Agent {self.agent_type} sees following ReAct history as a context: {current_ReAct_history}.")        
+        print(f"----AGENT {self.agent_type} sees following state before response: {self.state}.")
+        print(f"----AGENT {self.agent_type} sees following ReAct history as a context: {current_ReAct_history}.")        
         interaction = agent_response(prompt=prompt, 
                                     answer_history=answer_history, 
                                     current_ReAct_history=current_ReAct_history, 
@@ -51,26 +57,30 @@ class Agent:
                                     system_instruction=self.system_prompt, 
                                     response_format=self.response_format,
                                     additional_context=additional_context)
-        response = self.validate_response(interaction.output_text)        
-        if (response.response_type == 'answer' and self.agent_type != 'interview_agent') or (response.response_type == 'action' and self.agent_type != 'tracking_agent'):
-            self.extract_state(answer_history=answer_history, current_ReAct_history=current_ReAct_history)
+        print(f"----AGENT {self.agent_type} response: ", interaction.output_text)
+        print(f"----AGENT response process used {interaction.usage.total_output_tokens} tokens.")
+        response = self.validate_response(interaction.output_text)     
+        if (response.response_type == 'answer' and self.agent_type != 'interview_agent') or (response.response_type == 'action' and self.agent_type == 'tracking_agent'):
+            self.extract_state(generated_answer=interaction.output_text)
         logger.log_agent_activity(f"{self.agent_type}", response.response_type, response.content, self.state)
         return response
 
-    def extract_state(self, answer_history, current_ReAct_history):
+    def extract_state(self, generated_answer,):
         prompt = f"Given this conversation and the latest answer, extract any information relevant to: {self.state.model_fields.keys()}, that was discussed. Return only what's explicitly stated."
         system_instruction = "You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
-        interaction = agent_response(prompt=prompt,
-                                    answer_history=answer_history, 
-                                    current_ReAct_history=[current_ReAct_history], 
-                                    agent_state=self.state, 
-                                    agent_type=self.agent_type, 
-                                    system_instruction=system_instruction, 
-                                    response_format=self.extract_format,
-                                    additional_context=[])
+        interaction = client.interactions.create(
+            model = config.llm["model"],
+            system_instruction = system_instruction,
+            input = f"Answer from which you're supposed to extract info form: {generated_answer}",
+            response_format = self.extract_format,
+            generation_config={
+                "max_output_tokens": config.llm["max_output_tokens"],
+            },
+        )
         response = self.validate_extraction(interaction.output_text)     
         self.state = self.state.model_copy(update=response.model_dump(exclude_defaults=True))
-        print(f"{self.agent_type} state extraction: {self.state}")
+        print(f"----EXTRACTION of {self.agent_type} state: {self.state}")
+        print(f"----EXTRACTION process used {interaction.usage.total_output_tokens} tokens.")
 
 class InterviewAgent(Agent):
     def __init__(self,):

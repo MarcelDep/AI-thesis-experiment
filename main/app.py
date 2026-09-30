@@ -86,12 +86,12 @@ additional_context = {"interview_agent": [], 'planner_agent': st.session_state.i
 if prompt := st.chat_input("Type text here") or st.session_state.previous_response_type in modelReponses:    
     # If user has send a prompt
     if prompt != None and prompt != True:
-        print(f"USER: {prompt}")
+        print(f"----USER: {prompt}")
         logger.log_user_messages(prompt)
         send_msg(role="user", text=prompt)
         st.session_state.answer_history.append(f"USER PROMPT: {prompt}")
         st.session_state.current_thinking_process = []
-        st.session_state.interview_agent_instance.extract_state(st.session_state.answer_history, st.session_state.current_thinking_process)
+        st.session_state.interview_agent_instance.extract_state(prompt)
         # Orchestrator choose which agent should response
         orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, interview_agent_state=st.session_state.interview_agent_instance.state, planner_agent_state=st.session_state.planner_agent_instance.state)
         st.session_state.current_agent = orchestrator_decision.agent
@@ -144,8 +144,6 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
     # If tracking agent was chosen
     elif st.session_state.current_agent == 'tracking_agent':
         interaction = st.session_state.tracking_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, additional_context=additional_context[st.session_state.current_agent])
-
-    print(f"Agent {st.session_state.current_agent} response: ", interaction)
 
     # Save agent response type as session vaviable and make neccesary steps after that
     if interaction.response_type == 'answer':
