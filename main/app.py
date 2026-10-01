@@ -91,7 +91,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         send_msg(role="user", text=prompt)
         st.session_state.answer_history.append(f"USER PROMPT: {prompt}")
         st.session_state.current_thinking_process = []
-        st.session_state.interview_agent_instance.extract_state(prompt)
+        st.session_state.interview_agent_instance.extract_state(prompt=prompt)
         # Orchestrator choose which agent should response
         orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, interview_agent_state=st.session_state.interview_agent_instance.state, planner_agent_state=st.session_state.planner_agent_instance.state)
         st.session_state.current_agent = orchestrator_decision.agent

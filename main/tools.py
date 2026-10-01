@@ -1,4 +1,5 @@
 import  json
+import  agents
 import  geocoder
 import  requests
 from    datetime                           import date
@@ -22,7 +23,7 @@ def switch_agent(answer_history, current_ReAct_history, interview_agent_state, p
 def get_commit_messages(owner, repo, token):
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",}
     response = requests.get(f'https://api.github.com/repos/{owner}/{repo}/commits', headers=headers).json()
-    commits_with_sha = [[commit["commit"]["message"],commit["sha"]]  for commit in response]
+    commits_with_sha = [[commit["commit"]["message"],commit["sha"]] for commit in response]
     print(f"COMMIT MESSAGES: {commits_with_sha}")
     return commits_with_sha
 
