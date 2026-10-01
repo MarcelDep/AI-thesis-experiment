@@ -40,15 +40,17 @@ class PlannerState(BaseModel):
     tasks: list[Task] = []
 
 class InterviewAgentResponse(BaseModel):
+    thought: str
     response_type: Literal["thought", "action", "answer"]
-    content: str
     tool: Optional[Literal["switch_agent", "current_date", "user_location"]] = None
+    content: str
     state_updates: Optional[InterviewState] = None
 
 class PlannerAgentResponse(BaseModel):
+    thought: str
     response_type: Literal["thought", "action", "answer"]
-    content: str
     tool: Optional[Literal["switch_agent", "current_date", "user_location"]] = None
+    content: str
     state_updates: Optional[PlannerState] = None
 
 class OrchestratorResponse(BaseModel):
@@ -73,15 +75,16 @@ class TrackingState(BaseModel):
     head_sha: Optional[str] = None
 
 class TrackingAgentResponse(BaseModel):
+    thought: str
     response_type: Literal["thought", "action", "answer"]
-    content: str
     tool: Optional[Literal["current_date", "get_commit_diff", "switch_agent", "get_commit_messages"]] = None
+    content: str
     state_updates: Optional[TrackingState] = None
 
 INTERVIEW_AGENT_RESPONSE_DESCRIPTION = f"""
 You must respond in JSON format with the following fields:
+- "thought": ALWAYS reason about what to do next
 - "response_type": one of "thought", "action", or "answer"
-    - "thought": use when reasoning about what to do next
     - "action": use when calling a tool
     - "answer": use when responding directly to the user
 - "content": your actual response text — thought, action reasoning, or answer to user
@@ -97,8 +100,8 @@ You must respond in JSON format with the following fields:
 
 PLANNER_AGENT_RESPONSE_DESCRIPTION = f"""
 You must respond in JSON format with the following fields:
+- "thought": ALWAYS reason about what to do next
 - "response_type": one of "thought", "action", or "answer"
-    - "thought": use when reasoning about what to do next
     - "action": use when calling a tool
     - "answer": use when responding directly to the user
 - "content": your actual response text — thought, action reasoning, or answer to user
@@ -109,8 +112,8 @@ You must respond in JSON format with the following fields:
 
 TRACKING_AGENT_RESPONSE_DESCRIPTION = f"""
 You must respond in JSON format with the following fields:
+- "thought": ALWAYS reason about what to do next
 - "response_type": one of "thought", "action", or "answer"
-    - "thought": use when reasoning about which commits to inspect, how they relate to planned tasks, or evaluating confidence in your assessment
     - "action": use when calling a tool to inspect commit details
     - "answer": use when delivering your final progress assessment to the user
 - "content": your actual response text — reasoning in thought, tool call description in action, or summary assessment in answer
@@ -133,7 +136,7 @@ You must respond in JSON format with the following fields:
 """
 
 REACT_INSTRUCTIONS = """Work in ReAct workflow. You MUST follow this exact sequence for every response:
-1. First ALWAYS send a thought message — use it to plan what you need, decide whether to call a tool, and determine if you have enough information to answer.
+1. ALWAYS fill a thought field in your response — use it to plan what you need, decide whether to call a tool, and determine if you have enough information to answer.
 2. (Optional) An action message (if you need a tool) 
 3. An answer message AFTER thought - final response that will be shown to user.
 NEVER send an answer without a preceding thought before.

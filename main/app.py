@@ -77,7 +77,7 @@ def send_msg(role, text):
     st.session_state.messages.append({'role': role, "content": text})
 
 # Variables
-modelReponses = ['thought', 'action',] 
+modelReponses = ['action',] 
 available_tools = ['current_date', 'user_location', 'switch_agent', 'get_commit_messages', 'get_commit_diff',]
 available_agents = ['interview_agent', 'planner_agent', 'tracking_agent',]
 additional_context = {"interview_agent": [], 'planner_agent': st.session_state.interview_agent_instance.state, 'tracking_agent': st.session_state.planner_agent_instance.state,}
@@ -95,9 +95,6 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         # Orchestrator choose which agent should response
         orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, interview_agent_state=st.session_state.interview_agent_instance.state, planner_agent_state=st.session_state.planner_agent_instance.state)
         st.session_state.current_agent = orchestrator_decision.agent
-    # If model previous message has been a thought
-    elif st.session_state.previous_response_type == 'thought':
-        prompt = "NOT USER RESPONSE: Continue response based on conversation history."
     # If model previous message has been an action - more specifically current_date tool call
     elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'current_date':
         date = tools.current_date()
