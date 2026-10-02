@@ -60,8 +60,6 @@ class OrchestratorResponse(BaseModel):
 class TaskStatus(BaseModel):
     task_name: str = ''
     status: Literal["done", "in_progress", "not_started"] = 'not_started'
-    justification: str = ''
-    confidence: float = 0.0
 
 class CommitsMsgSha(BaseModel):
     commit_message: str = ''
@@ -80,6 +78,9 @@ class TrackingAgentResponse(BaseModel):
     tool: Optional[Literal["current_date", "get_commit_diff", "switch_agent", "get_commit_messages"]] = None
     content: str
     state_updates: Optional[TrackingState] = None
+
+class TrackingTaskExtraction(BaseModel):
+    tasks_status: list[TaskStatus] = []
 
 INTERVIEW_AGENT_RESPONSE_DESCRIPTION = f"""
 You must respond in JSON format with the following fields:
@@ -118,15 +119,11 @@ You must respond in JSON format with the following fields:
     - "answer": use when delivering your final progress assessment to the user
 - "content": your actual response text — reasoning in thought, tool call description in action, or summary assessment in answer
 - "tool": only when response_type is "action", one of: {[tools_info[tool] for tool in tracking_agent_tools]}. Otherwise null.
-- "tool_input": only when response_type is "action" and tool is "get_commit_diff" — provide the base and head commit SHA you want to compare. Otherwise null.
 - "state_updates": only when response_type is "answer" — provide a list of task assessments, one per planned task.
-    - "task_name": exact name of the task from the project plan
-    - "status": one of "done", "in_progress", or "not_started" based on commit evidence
-    - "justification": brief explanation of why you assigned this status, referencing specific commits where possible
-    - "confidence": float between 0.0 and 1.0 indicating how confident you are in this assessment — lower when commit messages are vague or diffs weren't inspected, higher when code changes clearly match task requirements
+    - "tasks_status": list of tasks statuses containing - task name and task status
     - "commits_msg_sha": list of commit messages and their SHA acquired from GitHub by get_commit_messages function 
-    - "base_sha": only when response_type is "action" and tool is "get_commit_diff" — provide the base you want to compare
-    - "head_sha": only when response_type is "action" and tool is "get_commit_diff" — provide the head you want to compare
+    - "base_sha": only when response_type is "action" and tool is "get_commit_diff" — provide the base sha of commit you want to compare. Otherwise null
+    - "head_sha": only when response_type is "action" and tool is "get_commit_diff" — provide the head sha of commit you want to compare. Otherwise null
 """
 
 ORCHESTRATOR_RESPONSE_DESCRIPTION = f"""
@@ -195,5 +192,5 @@ llm = {
     "tracking_agent_response_format": {"type": "text", "mime_type": "application/json", "schema": TrackingAgentResponse.model_json_schema()},
     "interview_agent_extraction_format": {"type": "text", "mime_type": "application/json", "schema": InterviewState.model_json_schema()},
     "planner_agent_extraction_format":  {"type": "text", "mime_type": "application/json", "schema": PlannerState.model_json_schema()},
-    "tracking_agent_extraction_format": {"type": "text", "mime_type": "application/json", "schema": TrackingState.model_json_schema()},    
+    "tracking_agent_extraction_format": {"type": "text", "mime_type": "application/json", "schema": TrackingTaskExtraction.model_json_schema()},    
 }

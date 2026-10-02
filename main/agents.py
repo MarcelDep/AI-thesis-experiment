@@ -40,7 +40,7 @@ def orchiestrator(prompt, answer_history, current_ReAct_history, interview_agent
 
     decision = config.OrchestratorResponse.model_validate_json(interaction.output_text)
     logger.log_orchestrator_activity(decision.agent, decision.justification)
-    print(f"----ORCHESTRATOR choosed agent: { decision}")
+    print(f"----ORCHESTRATOR choosed agent: {decision}")
     print(f"----ORCHESTRATOR decision process used {interaction.usage.total_output_tokens} tokens.")
     return decision
 
@@ -68,7 +68,10 @@ class Agent:
         return response
 
     def extract_state(self, generated_answer, tool_output):
-        system_instruction = f"You are a data extraction assistant. Given this conversation and the latest answer, extract any information relevant to: {self.state.model_fields.keys()}, that was discussed. Return only what's explicitly stated. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
+        print(f"----LIST of fields to fill {self.state.model_fields.keys()}")
+        print(f"----GENERATED answer to extract info from: {generated_answer}")
+        print(f"----PROMPT to extract info from: {tool_output}")
+        system_instruction = f"You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
         interaction = client.interactions.create(
             model = config.llm["model"],
             system_instruction = system_instruction,
