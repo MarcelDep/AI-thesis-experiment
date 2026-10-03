@@ -59,23 +59,21 @@ class Agent:
         print(f"----AGENT {self.agent_type} response: ", interaction.output_text)
         print(f"----AGENT response process used {interaction.usage.total_output_tokens} tokens.")
         response = self.validate_response(interaction.output_text)     
+        # Rozwiąż problem tego, że czasami extrakcja dostanie nadmiarowe info (prompt wtedy kiedy go nie potrzebuje itp - moze ekstrakcja jako interfejs?)
         if (response.response_type == 'answer' and self.agent_type != 'interview_agent'):
-            if current_ReAct_history != 0: # (tool was called)
-                self.extract_state(generated_answer=interaction.output_text, tool_output=prompt)
-            else: 
-                self.extract_state(generated_answer=interaction.output_text, tool_output="")
+            self.extract_state(generated_answer=interaction.output_text, prompt=prompt)
         logger.log_agent_activity(f"{self.agent_type}", response.response_type, response.content, self.state)
         return response
 
-    def extract_state(self, generated_answer, tool_output):
+    def extract_state(self, generated_answer, prompt):
         print(f"----LIST of fields to fill {self.state.model_fields.keys()}")
         print(f"----GENERATED answer to extract info from: {generated_answer}")
-        print(f"----PROMPT to extract info from: {tool_output}")
+        print(f"----PROMPT to extract info from: {prompt}")
         system_instruction = f"You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
         interaction = client.interactions.create(
             model = config.llm["model"],
             system_instruction = system_instruction,
-            input = f"Agent answer and tool output (if empty - none tool was called) from which you're supposed to extract info form: AGENT ANSWER - {generated_answer} TOOL OUTPUT - {tool_output}",
+            input = f"Agent answer and tool output (if empty - none tool was called) from which you're supposed to extract info form: AGENT ANSWER - {generated_answer} PROMPT - {prompt}",
             response_format = self.extract_format,
             generation_config={
                 "max_output_tokens": config.llm["max_output_tokens"],
@@ -130,7 +128,7 @@ class TrackingAgent(Agent):
         self.system_prompt = config.llm['tracking_agent_instruction']
         self.response_format = config.llm["tracking_agent_response_format"]
         self.validate_response = config.TrackingAgentResponse.model_validate_json
-        self.extract_format = config.llm['tracking_agent_extraction_format'] 
+        self.extract_format = config.llm['tracking_agent_task_extraction_format'] 
         self.validate_extraction = config.TrackingState.model_validate_json
 
 # Dodaj wymuszenie stworzenia wszystkich powyzszych selfow w kazdej klasie agent za pomoca @abstractmethod

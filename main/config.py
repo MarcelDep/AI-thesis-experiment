@@ -69,8 +69,6 @@ class CommitsMsgSha(BaseModel):
 class TrackingState(BaseModel):
     tasks_status: list[TaskStatus] = []
     commits_msg_sha: list[CommitsMsgSha] = []
-    base_sha: Optional[str] = None
-    head_sha: Optional[str] = None
 
 class TrackingAgentResponse(BaseModel):
     thought: str
@@ -81,6 +79,10 @@ class TrackingAgentResponse(BaseModel):
 
 class TrackingTaskExtraction(BaseModel):
     tasks_status: list[TaskStatus] = []
+
+class TrackingShaExtraction(BaseModel):
+    base_sha: Optional[str] = None
+    head_sha: Optional[str] = None
 
 INTERVIEW_AGENT_RESPONSE_DESCRIPTION = f"""
 You must respond in JSON format with the following fields:
@@ -192,5 +194,6 @@ llm = {
     "tracking_agent_response_format": {"type": "text", "mime_type": "application/json", "schema": TrackingAgentResponse.model_json_schema()},
     "interview_agent_extraction_format": {"type": "text", "mime_type": "application/json", "schema": InterviewState.model_json_schema()},
     "planner_agent_extraction_format":  {"type": "text", "mime_type": "application/json", "schema": PlannerState.model_json_schema()},
-    "tracking_agent_extraction_format": {"type": "text", "mime_type": "application/json", "schema": TrackingTaskExtraction.model_json_schema()},    
+    "tracking_agent_task_extraction_format": {"type": "text", "mime_type": "application/json", "schema": TrackingTaskExtraction.model_json_schema()},    
+    "tracking_agent_sha_extraction_format": {"type": "text", "mime_type": "application/json", "schema": TrackingShaExtraction.model_json_schema()},    
 }
