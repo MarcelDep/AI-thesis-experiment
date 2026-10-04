@@ -58,6 +58,7 @@ class Agent:
                                     additional_context=additional_context)
         print(f"----AGENT {self.agent_type} response: ", interaction.output_text)
         print(f"----AGENT response process used {interaction.usage.total_output_tokens} tokens.")
+        print(f"----ACTURAL token usage {interaction.usage.total_output_tokens}")
         response = self.validate_response(interaction.output_text)     
         # Rozwiąż problem tego, że czasami extrakcja dostanie nadmiarowe info (prompt wtedy kiedy go nie potrzebuje itp - moze ekstrakcja jako interfejs?)
         if (response.response_type == 'answer' and self.agent_type != 'interview_agent'):
