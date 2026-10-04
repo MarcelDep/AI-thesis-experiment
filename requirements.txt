@@ -1,0 +1,7 @@
+geocoder
+requests
+google-genai
+pydantic
+streamlit
+PyGithub
+python-dotenv
