@@ -14,11 +14,11 @@ client = genai.Client()
 chunk_collection = rag.database_init()
 
 # Może dodaj state każdego agenta jako kontekst przy jego odpowiadaniu?
-def agent_response(prompt, answer_history, current_ReAct_history, agent_state, agent_type, system_instruction, response_format, additional_context):
+def agent_response(prompt, answer_history, current_ReAct_history, rag, agent_state, system_instruction, response_format, additional_context):
     interaction = client.interactions.create(
         model = config.llm["model"],
         system_instruction = system_instruction,
-        input = f'CONVERSATION HISTORY: {answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {current_ReAct_history} | RAG CONTEXT: {chunk_collection.query(query_texts=prompt, n_results=3)} | AGENT STATE: {agent_state} | ADDITIONAL CONTEXT: {additional_context} | PROMPT: {prompt}',
+        input = f'CONVERSATION HISTORY: {answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {current_ReAct_history} | RAG CONTEXT: {rag} | AGENT STATE: {agent_state} | ADDITIONAL CONTEXT: {additional_context} | PROMPT: {prompt}',
         response_format = response_format,
         generation_config={
             "max_output_tokens": config.llm["max_output_tokens"],
@@ -45,14 +45,14 @@ def orchiestrator(prompt, answer_history, current_ReAct_history, interview_agent
     return decision
 
 class Agent:
-    def response(self, prompt, answer_history, current_ReAct_history, additional_context, ):
+    def response(self, prompt, answer_history, current_ReAct_history, rag, additional_context, ):
         print(f"----AGENT {self.agent_type} sees following state before response: {self.state}.")
         print(f"----AGENT {self.agent_type} sees following ReAct history as a context: {current_ReAct_history}.")        
         interaction = agent_response(prompt=prompt, 
                                     answer_history=answer_history, 
-                                    current_ReAct_history=current_ReAct_history, 
+                                    current_ReAct_history=current_ReAct_history,
+                                    rag=rag, 
                                     agent_state=self.state, 
-                                    agent_type=self.agent_type, 
                                     system_instruction=self.system_prompt, 
                                     response_format=self.response_format,
                                     additional_context=additional_context)

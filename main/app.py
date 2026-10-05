@@ -9,6 +9,7 @@ from    google                             import genai
 from    github                             import Github
 from    dotenv                             import load_dotenv
 
+chunk_collection = rag.database_init()
 load_dotenv()
 
 # UI
@@ -51,6 +52,9 @@ if "planner_agent_instance" not in st.session_state:
 if "tracking_agent_instance" not in st.session_state:
     st.session_state.tracking_agent_instance = agents.TrackingAgent()
 
+if "rag_query" not in st.session_state:
+    st.session_state.rag_query = ""
+
 if "github_token" not in st.session_state:
     st.session_state.github_token = os.getenv("GITHUB_PAT")
 
@@ -80,6 +84,7 @@ def send_msg(role, text):
 modelReponses = ['action',] 
 available_tools = ['current_date', 'user_location', 'switch_agent', 'get_commit_messages', 'get_commit_diff',]
 available_agents = ['interview_agent', 'planner_agent', 'tracking_agent',]
+# Zamień additional context na state innych agentów - może usun?
 additional_context = {"interview_agent": [], 'planner_agent': st.session_state.interview_agent_instance.state, 'tracking_agent': st.session_state.planner_agent_instance.state,}
 
 # Trigger when user has send a prompt or when previous message has been a thought or an action
@@ -92,6 +97,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         st.session_state.answer_history.append(f"USER PROMPT: {prompt}")
         st.session_state.current_thinking_process = []
         st.session_state.interview_agent_instance.extract_state(prompt=prompt)
+        st.session_state.rag_query = chunk_collection.query(query_texts=prompt, n_results=3)
         # Orchestrator choose which agent should response
         orchestrator_decision = agents.orchiestrator(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, interview_agent_state=st.session_state.interview_agent_instance.state, planner_agent_state=st.session_state.planner_agent_instance.state)
         st.session_state.current_agent = orchestrator_decision.agent
@@ -148,13 +154,13 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
     # Czy da się jakoś pozbyć tej ściany ifów?
     # If interview agent was chosen
     elif st.session_state.current_agent == 'interview_agent':
-        interaction = st.session_state.interview_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, additional_context=additional_context[st.session_state.current_agent])
+        interaction = st.session_state.interview_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, rag=st.session_state.rag_query, additional_context=additional_context[st.session_state.current_agent])
     # If planner agent was chosen
     elif st.session_state.current_agent == 'planner_agent':
-        interaction = st.session_state.planner_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, additional_context=additional_context[st.session_state.current_agent])
+        interaction = st.session_state.planner_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, rag=st.session_state.rag_query, additional_context=additional_context[st.session_state.current_agent])
     # If tracking agent was chosen
     elif st.session_state.current_agent == 'tracking_agent':
-        interaction = st.session_state.tracking_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, additional_context=additional_context[st.session_state.current_agent])
+        interaction = st.session_state.tracking_agent_instance.response(prompt=prompt, answer_history=st.session_state.answer_history, current_ReAct_history=st.session_state.current_thinking_process, rag=st.session_state.rag_query, additional_context=additional_context[st.session_state.current_agent])
 
     # Save agent response type as session vaviable and make neccesary steps after that
     if interaction.response_type == 'answer':
