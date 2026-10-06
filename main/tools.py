@@ -26,8 +26,12 @@ def switch_agent(answer_history, current_ReAct_history, interview_agent_state, p
 def get_commit_messages(owner, repo, token):
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",}
     response = requests.get(f'https://api.github.com/repos/{owner}/{repo}/commits', headers=headers).json()
-    commits_with_sha = [[commit["commit"]["message"],commit["sha"]] for commit in response]
-    print(f"COMMIT MESSAGES: {commits_with_sha}")
+    if response["message"] == "Bad credentials":
+        print(f"----RESPONSE: {response['message']}")
+        commits_with_sha = "ERROR: user has provided invalid GitHub credintials. Check if they are correct and try again."
+    else:
+        commits_with_sha = [[commit["commit"]["message"],commit["sha"]] for commit in response]
+        print(f"COMMIT MESSAGES: {commits_with_sha}")
     return commits_with_sha
 
 def get_commit_diff(owner, repo, token, prompt, answer_history, current_ReAct_history, commits_msg_sha):
@@ -40,13 +44,17 @@ def get_commit_diff(owner, repo, token, prompt, answer_history, current_ReAct_hi
             "max_output_tokens": config.llm["max_output_tokens"],
         },
     )
-    print(f"----BASE and head shas: {interaction.output_text}")
-    shas = config.TrackingShaExtraction.model_validate_json(interaction.output_text)
-    basehead = f"{shas.base_sha}...{shas.head_sha}"
-    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github.diff",}
-    response = requests.get(f'https://api.github.com/repos/{owner}/{repo}/compare/{basehead}', headers=headers)
-    print(response.text)
-    diff = response.text
+    if response["message"] == "Bad credentials":
+        print(f"----RESPONSE: {response['message']}")
+        diff = "ERROR: user has provided invalid GitHub credintials. Check if they are correct and try again."
+    else:
+        print(f"----BASE and head shas: {interaction.output_text}")
+        shas = config.TrackingShaExtraction.model_validate_json(interaction.output_text)
+        basehead = f"{shas.base_sha}...{shas.head_sha}"
+        headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github.diff",}
+        response = requests.get(f'https://api.github.com/repos/{owner}/{repo}/compare/{basehead}', headers=headers)
+        print(response.text)
+        diff = response.text
     return diff
 
 # def get_commit_metadata():
