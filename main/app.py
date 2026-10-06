@@ -62,6 +62,9 @@ if "github_repo" not in st.session_state:
 if "github_owner" not in st.session_state:
     st.session_state.github_owner = ""
 
+if "conv_summary" not in st.session_state:
+    st.session_state.conv_summary = ""
+
 st.session_state.github_repo = st.sidebar.text_input("GitHub repo", value=st.session_state.github_repo)
 st.session_state.github_owner = st.sidebar.text_input("GitHub owner", value=st.session_state.github_owner)
 
@@ -140,7 +143,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
     else:
         error_msg = f"ERROR: {st.session_state.previous_response_type}"
         logger.log_errors(error_msg)
-        prompt = f"UKNOWN ERROR related to ReAct pipeline. Previous response_type was: {st.session_state.previous_response_type}"
+        prompt = f"UKNOWN ERROR. Previous response_type was: {st.session_state.previous_response_type}"
     
     # Check which agent was chosen to answer, if none of availeble call an error
     if st.session_state.current_agent not in available_agents:
@@ -162,6 +165,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
 
     # Save agent response type as session vaviable and make neccesary steps after that
     if interaction.response_type == 'answer':
+        st.session_state.conv_summary = agents.summarize(answer_history=answer_history)
         send_msg(role="assistant", text=interaction.content)
         st.session_state.previous_response_type = interaction.response_type
         st.session_state.answer_history.append(interaction.content)

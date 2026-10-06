@@ -40,7 +40,7 @@ def orchiestrator(prompt, answer_history, current_ReAct_history, interview_agent
     return decision
 
 class Agent(ABC):
-    def response(self, prompt, answer_history, current_ReAct_history, rag, additional_context, ):
+    def response(self, prompt, answer_history, current_ReAct_history, rag, additional_context,):
         print(f"----AGENT {self.agent_type} sees following state before response: {self.state}.")
         print(f"----AGENT {self.agent_type} sees following ReAct history as a context: {current_ReAct_history}.")        
         interaction = agent_response(prompt=prompt, 
@@ -151,4 +151,15 @@ class TrackingAgent(Agent):
         self.state = self.state.model_copy(update=response.model_dump(exclude_defaults=True))
         print(f"----EXTRACTION of {self.agent_type} state: {self.state}")
         print(f"----EXTRACTION process used {interaction.usage.total_output_tokens} tokens.")
+
+def summarize(answer_history,):
+    interaction = client.interactions.create(
+        model = config.llm["model"],
+        system_instruction = "You are an summarization agent. Your task is to summarize conversation based on its history. Your summary have to contain most important information while being as short as possible",
+        input = f'CONVERSATION HISTORY: {answer_history}',
+        generation_config={
+            "max_output_tokens": config.llm["max_output_tokens"],
+        },
+    )
+    return interaction.output_text
 # Dodaj wymuszenie stworzenia wszystkich powyzszych selfow w kazdej klasie agent za pomoca @abstractmethod
