@@ -8,25 +8,12 @@ client = genai.Client()
 
 chunk_collection = rag.database_init()
 
-# Może dodaj state każdego agenta jako kontekst przy jego odpowiadaniu?
-def agent_response(prompt, answer_history, current_ReAct_history, rag, agent_state, system_instruction, response_format, additional_context):
-    interaction = client.interactions.create(
-        model = config.llm["model"],
-        system_instruction = system_instruction,
-        input = f'CONVERSATION HISTORY: {answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {current_ReAct_history} | RAG CONTEXT: {rag} | AGENT STATE: {agent_state} | ADDITIONAL CONTEXT: {additional_context} | PROMPT: {prompt}',
-        response_format = response_format,
-        generation_config={
-            "max_output_tokens": config.llm["max_output_tokens"],
-        },
-    )
-    return interaction
-
-# Rozwiąż problem manualnego dodawania agentów do promtpa - słownik z statusem kazdego agenta?
-def orchiestrator(prompt, answer_history, current_ReAct_history, interview_agent_state, planner_agent_state):
+# Czy orchiestrator potrzebuje state tracking agenta i plannera? Moze uzyj jev'a do tego 
+def orchiestrator(SessionVariables: config.SessionVariables, PromptVariables: config.PromptVariables) -> str:
     interaction = client.interactions.create(
         model = config.llm["model"],
         system_instruction = config.llm["orchestrator_instruction"],
-        input = f'CONVERSATION HISTORY: {answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {current_ReAct_history}, INTERVIEW AGENT STATE: {interview_agent_state}, PLANNER AGENT STATE: {planner_agent_state}, PROMPT: {prompt}',
+        input = f'CONVERSATION HISTORY: {SessionVariables.answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {PromptVariables.current_ReAct_history}, INTERVIEW AGENT STATE: {SessionVariables.interview_agent_state}, PLANNER AGENT STATE: {SessionVariables.planner_agent_state}, TRACKING AGENT STATE: {SessionVariables.tracking_agent_state}, PROMPT: {PromptVariables.prompt}',
         response_format = config.llm["orchestrator_response_format"],
         generation_config={
             "max_output_tokens": config.llm["max_output_tokens"],
@@ -40,17 +27,18 @@ def orchiestrator(prompt, answer_history, current_ReAct_history, interview_agent
     return decision
 
 class Agent(ABC):
-    def response(self, prompt, answer_history, current_ReAct_history, rag, additional_context,):
+    def response(self, SessionVariables: config.SessionVariables, PromptVariables: config.PromptVariables) -> str:
         print(f"----AGENT {self.agent_type} sees following state before response: {self.state}.")
         print(f"----AGENT {self.agent_type} sees following ReAct history as a context: {current_ReAct_history}.")        
-        interaction = agent_response(prompt=prompt, 
-                                    answer_history=answer_history, 
-                                    current_ReAct_history=current_ReAct_history,
-                                    rag=rag, 
-                                    agent_state=self.state, 
-                                    system_instruction=self.system_prompt, 
-                                    response_format=self.response_format,
-                                    additional_context=additional_context)
+        interaction = client.interactions.create(
+            model = config.llm["model"],
+            system_instruction = self.system_prompt,
+            input = f'CONVERSATION HISTORY: {SessionVariables.answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {PromptVariables.current_ReAct_history} | RAG CONTEXT: {PromptVariables.rag} | AGENT STATE: {self.agent_state} | ADDITIONAL CONTEXT: {additional_context} | PROMPT: {prompt}',
+            response_format = self.response_format,
+            generation_config={
+                "max_output_tokens": config.llm["max_output_tokens"],
+            },
+        )
         print(f"----AGENT {self.agent_type} response: ", interaction.output_text)
         print(f"----AGENT response process used {interaction.usage.total_output_tokens} tokens.")
         print(f"----ACTURAL token usage {interaction.usage.total_output_tokens}")
@@ -59,11 +47,11 @@ class Agent(ABC):
         if response.response_type == 'answer':
             match self.agent_type:
                 case "interview_agent":
-                    self.extract_state(prompt=prompt)
+                    self.extract_state(prompt=PromptVariables.prompt)
                 case "planner_agent":
                     self.extract_state(generated_answer=interaction.output_text)
                 case "tracking_agent":
-                    self.extract_state(prompt=prompt, generated_answer=interaction.output_text)
+                    self.extract_state(prompt=PromptVariables.prompt, generated_answer=interaction.output_text)
         logger.log_agent_activity(f"{self.agent_type}", response.response_type, response.content, self.state)
         return response
 
@@ -81,7 +69,7 @@ class InterviewAgent(Agent):
         self.extract_format = config.llm['interview_agent_extraction_format'] 
         self.validate_extraction = config.InterviewState.model_validate_json
 
-    def extract_state(self, prompt):
+    def extract_state(self, prompt: str):
         system_instruction = f"You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
         interaction = client.interactions.create(
             model = config.llm["model"],
@@ -107,7 +95,7 @@ class PlannerAgent(Agent):
         self.extract_format = config.llm['planner_agent_extraction_format'] 
         self.validate_extraction = config.PlannerState.model_validate_json
 
-    def extract_state(self, generated_answer,):
+    def extract_state(self, generated_answer: str,):
         print(f"----GENERATED answer to extract info from: {generated_answer}")
         system_instruction = f"You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
         interaction = client.interactions.create(
@@ -134,7 +122,7 @@ class TrackingAgent(Agent):
         self.extract_format = config.llm['tracking_agent_task_extraction_format'] 
         self.validate_extraction = config.TrackingState.model_validate_json
 
-    def extract_state(self, generated_answer, prompt):
+    def extract_state(self, generated_answer: str, prompt: str):
         print(f"----GENERATED answer to extract info from: {generated_answer}")
         print(f"----PROMPT to extract info from: {prompt}")
         system_instruction = f"You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
