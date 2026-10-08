@@ -33,7 +33,8 @@ class Agent(ABC):
         interaction = client.interactions.create(
             model = config.llm["model"],
             system_instruction = self.system_prompt,
-            input = f'CONVERSATION HISTORY: {SessionVariables.answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {PromptVariables.current_ReAct_history} | RAG CONTEXT: {PromptVariables.rag} | AGENT STATE: {self.agent_state} | ADDITIONAL CONTEXT: {additional_context} | PROMPT: {prompt}',
+            # Dodaj jakoś zeby były automatycznie odpisuwane state agentów - nie ogólnie agents state tylko PLaner agent state: [state] itp
+            input = f'CONVERSATION HISTORY: {SessionVariables.answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {PromptVariables.current_ReAct_history} | RAG CONTEXT: {PromptVariables.rag} | AGENT STATEs: {SessionVariables.agent_states} | PROMPT: {PromptVariables.prompt}',
             response_format = self.response_format,
             generation_config={
                 "max_output_tokens": config.llm["max_output_tokens"],
