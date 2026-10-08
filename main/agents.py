@@ -29,7 +29,7 @@ def orchiestrator(SessionVariables: config.SessionVariables, PromptVariables: co
 class Agent(ABC):
     def response(self, SessionVariables: config.SessionVariables, PromptVariables: config.PromptVariables) -> str:
         print(f"----AGENT {self.agent_type} sees following state before response: {self.state}.")
-        print(f"----AGENT {self.agent_type} sees following ReAct history as a context: {current_ReAct_history}.")        
+        print(f"----AGENT {self.agent_type} sees following ReAct history as a context: {PromptVariables.current_ReAct_history}.")        
         interaction = client.interactions.create(
             model = config.llm["model"],
             system_instruction = self.system_prompt,

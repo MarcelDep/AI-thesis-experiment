@@ -65,11 +65,11 @@ if "github_owner" not in st.session_state:
 if "conv_summary" not in st.session_state:
     st.session_state.conv_summary = ""
 
-st.session_state.github_repo = st.sidebar.text_input("GitHub repo", value=st.session_state.github_repo)
-st.session_state.github_owner = st.sidebar.text_input("GitHub owner", value=st.session_state.github_owner)
-
 if "switch_agent_called" not in st.session_state:
     st.session_state.switch_agent_called = False
+
+st.session_state.github_repo = st.sidebar.text_input("GitHub repo", value=st.session_state.github_repo)
+st.session_state.github_owner = st.sidebar.text_input("GitHub owner", value=st.session_state.github_owner)
 
 # Streamlit roles
 for message in st.session_state.messages:
@@ -165,7 +165,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
 
     # Save agent response type as session vaviable and make neccesary steps after that
     if interaction.response_type == 'answer':
-        st.session_state.conv_summary = agents.summarize(answer_history=answer_history)
+        st.session_state.conv_summary = agents.summarize(answer_history=answer_history,)
         send_msg(role="assistant", text=interaction.content)
         st.session_state.previous_response_type = interaction.response_type
         st.session_state.answer_history.append(interaction.content)
