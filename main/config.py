@@ -24,10 +24,30 @@ database = {
     "THRESHOLD": 0.3,
 }
 
+# Datatype
 class Task(BaseModel):
     name: str
     deadline: str = ""
 
+class TaskStatus(BaseModel):
+    task_name: str = ''
+    status: Literal["done", "in_progress", "not_started"] = 'not_started'
+
+class CommitsMsgSha(BaseModel):
+    commit_message: str = ''
+    commit_sha: str = ''
+
+class PromptVariables(BaseModel):
+    rag: str
+    prompt: str
+    current_ReAct_history: list
+
+class GithubVariables(BaseModel):
+    repo: str
+    token: str
+    owner: str
+
+# State
 class InterviewState(BaseModel):
     goal: str = ""
     region: str = ""
@@ -39,6 +59,11 @@ class InterviewState(BaseModel):
 class PlannerState(BaseModel):
     tasks: list[Task] = []
 
+class TrackingState(BaseModel):
+    tasks_status: list[TaskStatus] = []
+    commits_msg_sha: list[CommitsMsgSha] = []
+
+# Response
 class InterviewAgentResponse(BaseModel):
     thought: str
     response_type: Literal["thought", "action", "answer"]
@@ -53,23 +78,6 @@ class PlannerAgentResponse(BaseModel):
     content: str
     state_updates: Optional[PlannerState] = None
 
-class OrchestratorResponse(BaseModel):
-    agent: Literal["interview_agent", "planner_agent", "tracking_agent"]
-    justification: str = ""
-
-class TaskStatus(BaseModel):
-    task_name: str = ''
-    status: Literal["done", "in_progress", "not_started"] = 'not_started'
-
-class CommitsMsgSha(BaseModel):
-    commit_message: str = ''
-    commit_sha: str = ''
-
-# Czy da rade jakoś zrobić, żeby zadania w tracking state to były zadania od plannera a w przypadku zmiany zadan w tracking zmianialo sie tez w planner
-class TrackingState(BaseModel):
-    tasks_status: list[TaskStatus] = []
-    commits_msg_sha: list[CommitsMsgSha] = []
-
 class TrackingAgentResponse(BaseModel):
     thought: str
     response_type: Literal["thought", "action", "answer"]
@@ -77,6 +85,11 @@ class TrackingAgentResponse(BaseModel):
     content: str
     state_updates: Optional[TrackingState] = None
 
+class OrchestratorResponse(BaseModel):
+    agent: Literal["interview_agent", "planner_agent", "tracking_agent"]
+    justification: str = ""
+
+# Extraction
 class TrackingTaskExtraction(BaseModel):
     tasks_status: list[TaskStatus] = []
 
@@ -84,6 +97,7 @@ class TrackingShaExtraction(BaseModel):
     base_sha: Optional[str] = None
     head_sha: Optional[str] = None
 
+# Datatype
 class AgentStates(BaseModel):
     interview_agent_state: InterviewState
     planner_agent_state: PlannerState
@@ -93,15 +107,7 @@ class SessionVariables(BaseModel):
     answer_history: list
     agent_states: AgentStates
 
-class PromptVariables(BaseModel):
-    rag: str
-    prompt: str
-    current_ReAct_history: list
-
-class GithubVariables(BaseModel):
-    repo: str
-    token: str
-    owner: str
+# Czy da rade jakoś zrobić, żeby zadania w tracking state to były zadania od plannera a w przypadku zmiany zadan w tracking zmianialo sie tez w planner
 
 INTERVIEW_AGENT_RESPONSE_DESCRIPTION = f"""
 You must respond in JSON format with the following fields:
