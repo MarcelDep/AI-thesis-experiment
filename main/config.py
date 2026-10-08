@@ -84,6 +84,25 @@ class TrackingShaExtraction(BaseModel):
     base_sha: Optional[str] = None
     head_sha: Optional[str] = None
 
+class AgentStates(BaseModel):
+    interview_agent_state: InterviewState
+    planner_agent_state: PlannerState
+    tracking_agent_state: TrackingState
+
+class SessionVariables(BaseModel):
+    answer_history: list
+    agent_states: AgentStates
+
+class PromptVariables(BaseModel):
+    rag: str
+    prompt: str
+    current_ReAct_history: list
+
+class GithubVariables(BaseModel):
+    repo: str
+    token: str
+    owner: str
+
 INTERVIEW_AGENT_RESPONSE_DESCRIPTION = f"""
 You must respond in JSON format with the following fields:
 - "thought": ALWAYS reason about what to do next
