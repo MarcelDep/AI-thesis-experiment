@@ -38,14 +38,14 @@ class CommitsMsgSha(BaseModel):
     commit_sha: str = ''
 
 class PromptVariables(BaseModel):
-    rag: str
-    prompt: str
-    current_ReAct_history: list
+    rag: str = ""
+    prompt: str = ""
+    current_ReAct_history: list = []
 
 class GithubVariables(BaseModel):
-    repo: str
-    token: str
-    owner: str
+    repo: str = ""
+    token: str = ""
+    owner: str = ""
 
 # State
 class InterviewState(BaseModel):
@@ -99,13 +99,13 @@ class TrackingShaExtraction(BaseModel):
 
 # Datatype
 class AgentStates(BaseModel):
-    interview_agent_state: InterviewState
-    planner_agent_state: PlannerState
-    tracking_agent_state: TrackingState
+    interview_agent_state: InterviewState = InterviewState()
+    planner_agent_state: PlannerState = PlannerState() 
+    tracking_agent_state: TrackingState = TrackingState()
 
 class SessionVariables(BaseModel):
-    answer_history: list
-    agent_states: AgentStates
+    answer_history: list = []
+    agent_states: AgentStates = AgentStates()
 
 # Czy da rade jakoś zrobić, żeby zadania w tracking state to były zadania od plannera a w przypadku zmiany zadan w tracking zmianialo sie tez w planner
 
