@@ -13,7 +13,7 @@ def orchiestrator(SessionVariables: config.SessionVariables, PromptVariables: co
     interaction = client.interactions.create(
         model = config.llm["model"],
         system_instruction = config.llm["orchestrator_instruction"],
-        input = f'CONVERSATION HISTORY: {SessionVariables.answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {PromptVariables.current_ReAct_history}, INTERVIEW AGENT STATE: {SessionVariables.agent_states.interview_agent_state}, PLANNER AGENT STATE: {SessionVariables.agent_states.planner_agent_state}, TRACKING AGENT STATE: {SessionVariables.agent_states.tracking_agent_state}, PROMPT: {PromptVariables.prompt}',
+        input = f'CONVERSATION SUMMARY: {SessionVariables.conv_summary} LAST 4 MESSAGES: {SessionVariables.answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {PromptVariables.current_ReAct_history}, INTERVIEW AGENT STATE: {SessionVariables.agent_states.interview_agent_state}, PLANNER AGENT STATE: {SessionVariables.agent_states.planner_agent_state}, TRACKING AGENT STATE: {SessionVariables.agent_states.tracking_agent_state}, PROMPT: {PromptVariables.prompt}',
         response_format = config.llm["orchestrator_response_format"],
         generation_config={
             "max_output_tokens": config.llm["max_output_tokens"],
@@ -34,7 +34,7 @@ class Agent(ABC):
             model = config.llm["model"],
             system_instruction = self.system_prompt,
             # Dodaj jakoś zeby były automatycznie odpisuwane state agentów - nie ogólnie agents state tylko PLaner agent state: [state] itp
-            input = f'CONVERSATION HISTORY: {SessionVariables.answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {PromptVariables.current_ReAct_history} | RAG CONTEXT: {PromptVariables.rag} | AGENT STATEs: {SessionVariables.agent_states} | PROMPT: {PromptVariables.prompt}',
+            input = f'CONVERSATION SUMMARY: {SessionVariables.conv_summary} LAST 4 MESSAGES: {SessionVariables.answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {PromptVariables.current_ReAct_history} | RAG CONTEXT: {PromptVariables.rag} | AGENT STATEs: {SessionVariables.agent_states} | PROMPT: {PromptVariables.prompt}',
             response_format = self.response_format,
             generation_config={
                 "max_output_tokens": config.llm["max_output_tokens"],
@@ -141,10 +141,10 @@ class TrackingAgent(Agent):
         print(f"----EXTRACTION of {self.agent_type} state: {self.state}")
         print(f"----EXTRACTION process used {interaction.usage.total_output_tokens} tokens.")
 
-def summarize(answer_history,):
+def summarize(summary: str, answer_history: list,) -> str:
     interaction = client.interactions.create(
         model = config.llm["model"],
-        system_instruction = "You are an summarization agent. Your task is to summarize conversation based on its history. Your summary have to contain most important information while being as short as possible",
+        system_instruction = f"You are an summarization agent. Your task is to summarize conversation based on its history. Your summary have to contain most important information while being as short as possible. Current summary: {summary} If summary isn't empty then continue this summary instead generating new one. Just generate a contuniuation of it. If summary is empty then make one.",
         input = f'CONVERSATION HISTORY: {answer_history}',
         generation_config={
             "max_output_tokens": config.llm["max_output_tokens"],

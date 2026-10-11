@@ -104,6 +104,7 @@ class AgentStates(BaseModel):
     tracking_agent_state: TrackingState = TrackingState()
 
 class SessionVariables(BaseModel):
+    conv_summary: str = ""
     answer_history: list = []
     agent_states: AgentStates = AgentStates()
 

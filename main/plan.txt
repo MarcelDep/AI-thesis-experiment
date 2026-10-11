@@ -65,13 +65,27 @@ DeveloperAgent would reciev:
 Fajnie by bylo jakby tracking agent po cichu w tle sprawdzał stan zadan na github - jezeli nowy commit to aktualizowana jest lista zadan i ich status 
 
 Test prompt:
-1. Hi i want to build an AI powered app for project management - it will be peoples (ideally in IT) project manager on their own projects
-2. 
+Hi i want to build an AI powered app for project management - it will be peoples (ideally in IT) project manager on their own projects
+
 Technologies: LangChain, OpenAI API, Python
 Deadline: 6 months
 Working style: I prefer to work in scrum 2 weeks per sprint
 Reqiurements: GitHub API intergation for task status checking, task scheduling and Code Review
 Region: Poland
-3. Plan me something
-4. I've done some progress - check out my github
-5. Track my progress again
+
+Plan me something
+
+I've done some progress - check out my github
+
+Track my progress again
+
+------------------------------------------------------------------------------------------------------------------------
+
+Może dodaj historie jako dict gdzie masz numery pytań i ich treść - dzieki temu mozna stworzyc tool do sprawdzania konkretncyh pytan z historii
+Może rób tyle planning i tracking agentów ile jest zaplanowanych sprintów? albo w jakis inny sposób wymuszaj odpowiadanie z wyróżnieniem poszczególnych sprintów
+chodzi o to zeby agent po zapisaniu w state daynch z sprintu 1 nie nadpisywał ich potem danymi ze sprintu 2 
+
+Największy problem jest z nadpisywaniem tego czego sie nie powinno nadpisywać w state. Przy zrobieniu ogólnego planu planner agent nadpisuje potem
+ten ogólny plan jakimś specyficznym planem np. konkretnym planem 2 sprintu i zapomina o orygilanym ogólym planie
+
+tak samo interview agent nadpisuje poprawne informacje bo jest do tego zmuszony w prompcie

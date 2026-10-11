@@ -154,7 +154,12 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
 
     # Save agent response type as session vaviable and make neccesary steps after that
     if interaction.response_type == 'answer':
-        st.session_state.conv_summary = agents.summarize(answer_history=st.session_state.session_variables_instance.answer_history,)
+        if len(st.session_state.session_variables_instance.answer_history) > 8:
+            summary = agents.summarize(summary=st.session_state.session_variables_instance.conv_summary, answer_history=st.session_state.session_variables_instance.answer_history,)
+            st.session_state.session_variables_instance.conv_summary = st.session_state.session_variables_instance.conv_summary + summary
+            print(f"----SUMMARY continuation {summary}")
+            print(f"----SUMMARY in session {st.session_state.session_variables_instance.conv_summary}")
+            st.session_state.session_variables_instance.answer_history = []
         send_msg(role="assistant", text=interaction.content)
         st.session_state.previous_response_type = interaction.response_type
         st.session_state.session_variables_instance.answer_history.append(f"AGENT ANSWER: {interaction.content}")
