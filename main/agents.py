@@ -47,8 +47,6 @@ class Agent(ABC):
         # Rozwiąż problem tego, że czasami extrakcja dostanie nadmiarowe info (prompt wtedy kiedy go nie potrzebuje itp - moze ekstrakcja jako interfejs?)
         if response.response_type == 'answer':
             match self.agent_type:
-                case "interview_agent":
-                    self.extract_state(prompt=PromptVariables.prompt)
                 case "planner_agent":
                     self.extract_state(generated_answer=interaction.output_text)
                 case "tracking_agent":
@@ -144,8 +142,8 @@ class TrackingAgent(Agent):
 def summarize(summary: str, answer_history: list,) -> str:
     interaction = client.interactions.create(
         model = config.llm["model"],
-        system_instruction = f"You are an summarization agent. Your task is to summarize conversation based on its history. Your summary have to contain most important information while being as short as possible. Current summary: {summary} If summary isn't empty then continue this summary instead generating new one. Just generate a contuniuation of it. If summary is empty then make one.",
-        input = f'CONVERSATION HISTORY: {answer_history}',
+        system_instruction = f"You are an summarization agent. Your task is to summarize conversation based on its history. Your summary should be rather short. If CURRENT SUMMARY isn't empty then continue this summary instead generating new one. Just generate a contuniuation of it. If summary is empty then make one.",
+        input = f'CONVERSATION HISTORY: {answer_history},  CURRENT SUMMARY: {summary}',
         generation_config={
             "max_output_tokens": config.llm["max_output_tokens"],
         },

@@ -87,6 +87,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         st.session_state.prompt_variables_instance.current_ReAct_history = []
         st.session_state.prompt_variables_instance.rag = chunk_collection.query(query_texts=prompt, n_results=3)
         st.session_state.session_variables_instance.answer_history.append(f"USER PROMPT: {prompt}")
+        st.session_state.session_variables_instance.agent_states.interview_agent_state = st.session_state.interview_agent_instance.state
         st.session_state.interview_agent_instance.extract_state(prompt=prompt)
         # Orchestrator choose which agent should response
         orchestrator_decision = agents.orchiestrator(SessionVariables=st.session_state.session_variables_instance, PromptVariables=st.session_state.prompt_variables_instance)
@@ -154,7 +155,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
 
     # Save agent response type as session vaviable and make neccesary steps after that
     if interaction.response_type == 'answer':
-        if len(st.session_state.session_variables_instance.answer_history) > 8:
+        if len(st.session_state.session_variables_instance.answer_history) > 2:
             summary = agents.summarize(summary=st.session_state.session_variables_instance.conv_summary, answer_history=st.session_state.session_variables_instance.answer_history,)
             st.session_state.session_variables_instance.conv_summary = st.session_state.session_variables_instance.conv_summary + summary
             print(f"----SUMMARY continuation {summary}")
@@ -176,7 +177,6 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         logger.log_errors(error_msg)
 
     # To jest nadmiarowe - agent nie musi miec w self informacji o state skoro jest ona przechowywana w session_variables
-    st.session_state.session_variables_instance.agent_states.interview_agent_state = st.session_state.interview_agent_instance.state
     st.session_state.session_variables_instance.agent_states.planner_agent_state = st.session_state.planner_agent_instance.state
     st.session_state.session_variables_instance.agent_states.tracking_agent_state = st.session_state.tracking_agent_instance.state
     st.session_state.prompt_variables_instance.current_ReAct_history.append(interaction.content)
