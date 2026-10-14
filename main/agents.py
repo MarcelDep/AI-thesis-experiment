@@ -73,7 +73,7 @@ class InterviewAgent(Agent):
         interaction = client.interactions.create(
             model = config.llm["model"],
             system_instruction = system_instruction,
-            input = f"User prompt from which you're supposed to extract info form: {prompt}",
+            input = f"User prompt from which you're supposed to extract info form: {prompt}.",
             response_format = self.extract_format,
             generation_config={
                 "max_output_tokens": config.llm["max_output_tokens"],

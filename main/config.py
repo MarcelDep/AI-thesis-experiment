@@ -57,7 +57,8 @@ class InterviewState(BaseModel):
     working_style: str = ""
     
 class PlannerState(BaseModel):
-    tasks: list[Task] = []
+    general_plan: list[Task] = []
+    specific_plan: list[Task] = []
 
 class TrackingState(BaseModel):
     tasks_status: list[TaskStatus] = []
@@ -136,7 +137,8 @@ You must respond in JSON format with the following fields:
 - "content": your actual response text — thought, action reasoning, or answer to user
 - "tool": only when response_type is "action", one of: {[tools_info[tool] for tool in planner_agent_tools]}. Otherwise null.
 - "state_updates": ALWAYS populate on every "answer" turn with the complete current task list. Never return null or empty tasks on an answer turn where you described any tasks. Every task mentioned in content must appear here structured with name and deadline.
-    - "tasks": list of task objects, each with "name" (task name) and "deadline" (task deadline, empty string if unknown)
+    - general_plan: list of task objects, each with "name" (task name) and "deadline" (task deadline, empty string if unknown), this field is reserved for general purpose tasks
+    - specific_plan: list of task objects, each with "name" (task name) and "deadline" (task deadline, empty string if unknown), this field is reserved for specific tasks for each general purpose task
 """
 
 TRACKING_AGENT_RESPONSE_DESCRIPTION = f"""

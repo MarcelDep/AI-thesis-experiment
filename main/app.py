@@ -87,8 +87,8 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         st.session_state.prompt_variables_instance.current_ReAct_history = []
         st.session_state.prompt_variables_instance.rag = chunk_collection.query(query_texts=prompt, n_results=3)
         st.session_state.session_variables_instance.answer_history.append(f"USER PROMPT: {prompt}")
-        st.session_state.session_variables_instance.agent_states.interview_agent_state = st.session_state.interview_agent_instance.state
         st.session_state.interview_agent_instance.extract_state(prompt=prompt)
+        st.session_state.session_variables_instance.agent_states.interview_agent_state = st.session_state.interview_agent_instance.state
         # Orchestrator choose which agent should response
         orchestrator_decision = agents.orchiestrator(SessionVariables=st.session_state.session_variables_instance, PromptVariables=st.session_state.prompt_variables_instance)
         st.session_state.current_agent = orchestrator_decision.agent

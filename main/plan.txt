@@ -88,4 +88,10 @@ chodzi o to zeby agent po zapisaniu w state daynch z sprintu 1 nie nadpisywał i
 Największy problem jest z nadpisywaniem tego czego sie nie powinno nadpisywać w state. Przy zrobieniu ogólnego planu planner agent nadpisuje potem
 ten ogólny plan jakimś specyficznym planem np. konkretnym planem 2 sprintu i zapomina o orygilanym ogólym planie
 
-tak samo interview agent nadpisuje poprawne informacje bo jest do tego zmuszony w prompcie
+tak samo interview agent nadpisuje poprawne informacje bo jest do tego zmuszony w 
+
+Trzeba jakos zmniejszyc ilosc extraction state'u - jakies wczesniejsze ustalenie czy w ogole to jest potrzebne
+
+Czy ekstrakcja ma opis tego jakie pola mają do uzupełnienia?
+
+Badania tego ile tokenow zuzywa rozwiazanie a ile z przekazywaniem calej konwersacji
