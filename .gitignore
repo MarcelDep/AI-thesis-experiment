@@ -2,7 +2,7 @@
 venv
 APIkey
 chromadb
-main/chroma_db
-main/__pycache__
-main/logs
+**/chroma_db
+**/__pycache__
+**/logs
 .env
