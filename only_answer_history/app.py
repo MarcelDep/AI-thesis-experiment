@@ -87,8 +87,6 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         st.session_state.prompt_variables_instance.current_ReAct_history = []
         st.session_state.prompt_variables_instance.rag = chunk_collection.query(query_texts=prompt, n_results=3)
         st.session_state.session_variables_instance.answer_history.append(f"USER PROMPT: {prompt}")
-        st.session_state.interview_agent_instance.extract_state(prompt=prompt)
-        st.session_state.session_variables_instance.agent_states.interview_agent_state = st.session_state.interview_agent_instance.state
         # Orchestrator choose which agent should response
         orchestrator_decision = agents.orchiestrator(SessionVariables=st.session_state.session_variables_instance, PromptVariables=st.session_state.prompt_variables_instance)
         st.session_state.current_agent = orchestrator_decision.agent
@@ -96,10 +94,14 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
     elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'current_date':
         date = tools.current_date()
         prompt = f"current_date tool RESPONSE: {date}"
+        st.session_state.session_variables_instance.answer_history.append(f"TOOL RESPONSE {prompt}")
+        st.session_state.prompt_variables_instance.current_ReAct_history.append(f"TOOL RESPONSE {prompt}")
     # If model previous message has been an action - more specifically user_location tool call
     elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'user_location':
         location = tools.user_location()
         prompt = f"user_location tool RESPONSE: {location}"
+        st.session_state.session_variables_instance.answer_history.append(f"TOOL RESPONSE {prompt}")
+        st.session_state.prompt_variables_instance.current_ReAct_history.append(f"TOOL RESPONSE {prompt}")
     # If model previous message has been an action - more specifically switch_agent tool call
     elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'switch_agent':
         if st.session_state.switch_agent_called == False:
@@ -109,6 +111,8 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
             prompt = f"Continue based on conversation history. Orchestration decision with justification: {orchestrator_decision}"
         else:
             prompt = f"You have been selected by the orchestrator to respond. Continue the conversation directly. Do NOT call switch_agent."
+        st.session_state.session_variables_instance.answer_history.append(f"TOOL RESPONSE {prompt}")
+        st.session_state.prompt_variables_instance.current_ReAct_history.append(f"TOOL RESPONSE {prompt}")
     elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'get_commit_messages':
         if st.session_state.github_variables_instance.repo == "" or st.session_state.github_variables_instance.owner == "":
             print("You need to provide GitHub creditials before calling github related tools.")
@@ -116,8 +120,9 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         else:
             commit_messages = tools.get_commit_messages(GithubVariables=st.session_state.github_variables_instance)
             print(st.session_state.tracking_agent_instance)
-            st.session_state.tracking_agent_instance.state.commits_msg_sha = commit_messages
             prompt = f"get_commit_messages tool RESPONSE: {commit_messages}"
+        st.session_state.session_variables_instance.answer_history.append(f"TOOL RESPONSE {prompt}")
+        st.session_state.prompt_variables_instance.current_ReAct_history.append(f"TOOL RESPONSE {prompt}")
     elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'get_commit_diff':
         if st.session_state.github_variables_instance.repo == "" or st.session_state.github_variables_instance.owner == "":
             print("You need to provide GitHub creditials before calling github related tools.")
@@ -129,6 +134,8 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
             else: 
                 prompt = f"ERROR: There aren't any commits messages in Tracking Agent state. You need to get users commits first with get_commit_messages before trying to diff two commits."
                 print(f"ERROR: There aren't any commits messages in Tracking Agent state. You need to get users commits first with get_commit_messages before trying to diff two commits.")
+        st.session_state.session_variables_instance.answer_history.append(f"TOOL RESPONSE {prompt}")
+        st.session_state.prompt_variables_instance.current_ReAct_history.append(f"TOOL RESPONSE {prompt}")
     # Else - call an error
     else:
         error_msg = f"ERROR: {st.session_state.previous_response_type}"
@@ -155,12 +162,6 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
 
     # Save agent response type as session vaviable and make neccesary steps after that
     if interaction.response_type == 'answer':
-        if len(st.session_state.session_variables_instance.answer_history) > 2:
-            summary = agents.summarize(summary=st.session_state.session_variables_instance.conv_summary, answer_history=st.session_state.session_variables_instance.answer_history,)
-            st.session_state.session_variables_instance.conv_summary = st.session_state.session_variables_instance.conv_summary + summary
-            print(f"----SUMMARY continuation {summary}")
-            print(f"----SUMMARY in session {st.session_state.session_variables_instance.conv_summary}")
-            st.session_state.session_variables_instance.answer_history = []
         send_msg(role="assistant", text=interaction.content)
         st.session_state.previous_response_type = interaction.response_type
         st.session_state.session_variables_instance.answer_history.append(f"AGENT ANSWER: {interaction.content}")
@@ -177,7 +178,5 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         logger.log_errors(error_msg)
 
     # To jest nadmiarowe - agent nie musi miec w self informacji o state skoro jest ona przechowywana w session_variables
-    st.session_state.session_variables_instance.agent_states.planner_agent_state = st.session_state.planner_agent_instance.state
-    st.session_state.session_variables_instance.agent_states.tracking_agent_state = st.session_state.tracking_agent_instance.state
     st.session_state.prompt_variables_instance.current_ReAct_history.append(interaction.content)
     st.rerun()

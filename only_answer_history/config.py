@@ -75,13 +75,6 @@ You must respond in JSON format with the following fields:
     - "answer": use when responding directly to the user
 - "content": your actual response text — thought, action reasoning, or answer to user
 - "tool": only when response_type is "action", one of: {[tools_info[tool] for tool in interview_agent_tools]}. Otherwise null.
-- "state_updates": ALWAYS populate this field on every "answer" turn with everything you currently know about the project. Never return null on an answer turn. Include all fields you know, even if learned in previous turns — this is a cumulative snapshot, not just what changed this turn. Use empty string "" only for fields where you genuinely have no information yet.
-    - "goal": what the user wants to build
-    - "region": where the user is located  
-    - "deadline": project deadline
-    - "technologies": preferred tech stack
-    - "requirements": specific project requirements
-    - "working_style": how the user prefers to work
 """
 
 PLANNER_AGENT_RESPONSE_DESCRIPTION = f"""
@@ -92,9 +85,6 @@ You must respond in JSON format with the following fields:
     - "answer": use when responding directly to the user
 - "content": your actual response text — thought, action reasoning, or answer to user
 - "tool": only when response_type is "action", one of: {[tools_info[tool] for tool in planner_agent_tools]}. Otherwise null.
-- "state_updates": ALWAYS populate on every "answer" turn with the complete current task list. Never return null or empty tasks on an answer turn where you described any tasks. Every task mentioned in content must appear here structured with name and deadline.
-    - general_plan: list of task objects, each with "name" (task name) and "deadline" (task deadline, empty string if unknown), this field is reserved for general purpose tasks
-    - specific_plan: list of task objects, each with "name" (task name) and "deadline" (task deadline, empty string if unknown), this field is reserved for specific tasks for each general purpose task
 """
 
 TRACKING_AGENT_RESPONSE_DESCRIPTION = f"""
@@ -104,12 +94,7 @@ You must respond in JSON format with the following fields:
     - "action": use when calling a tool to inspect commit details
     - "answer": use when delivering your final progress assessment to the user
 - "content": your actual response text — reasoning in thought, tool call description in action, or summary assessment in answer
-- "tool": only when response_type is "action", one of: {[tools_info[tool] for tool in tracking_agent_tools]}. Otherwise null.
-- "state_updates": only when response_type is "answer" — provide a list of task assessments, one per planned task.
-    - "tasks_status": list of tasks statuses containing - task name and task status
-    - "commits_msg_sha": list of commit messages and their SHA acquired from GitHub by get_commit_messages function 
-    - "base_sha": only when response_type is "action" and tool is "get_commit_diff" — provide the base sha of commit you want to compare. Otherwise null
-    - "head_sha": only when response_type is "action" and tool is "get_commit_diff" — provide the head sha of commit you want to compare. Otherwise null
+- "tool": only when response_type is "action", one of: {[tools_info[tool] for tool in tracking_agent_tools]}. Otherwise null.l
 """
 
 ORCHESTRATOR_RESPONSE_DESCRIPTION = f"""
