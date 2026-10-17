@@ -9,16 +9,16 @@ agents_characteristic = {
 }
 
 tools_info = {
-    "current_date": "'current_date' returns current date - day, month and year in YYYY-MM-DD format. Use it if user gives you a deadline.",
     "user_location": "'user_location' returns user location.",
     "switch_agent": "'switch_agent' suggests orchestrator to swich agent that different agent than you should responde to user prompt. If switch_agent was called in previous ReAct history DON'T call it again, even if user said so.",
     "get_commit_diff": "'get_commit_diff' returns chosen commit diff - shows you what changes specifically user has made in picked commit. Before using this tool you have to gather SHA of commits you want to diff and set them as base_sha and head_sha parameters.",
     "get_commit_messages": "'get_commit_messages' returns list of commit messages and their sha of repo given by user.",
+    "update_state": "'update_state' called when the user's message adds new information or corrects something already known about the project. Takes the field name(s) being changed and their new value(s). Only call this when something in state is actually new or different — don't call it just because the user is talking; most turns need no update"
 }
 
-interview_agent_tools = ['current_date', 'user_location', 'switch_agent']
-planner_agent_tools = ['current_date', 'user_location', 'switch_agent']
-tracking_agent_tools = ['current_date', 'switch_agent', "get_commit_messages", "get_commit_diff"]
+interview_agent_tools = ['user_location', 'switch_agent', 'update_state']
+planner_agent_tools = ['user_location', 'switch_agent']
+tracking_agent_tools = ['switch_agent', "get_commit_messages", "get_commit_diff"]
 
 database = {
     "THRESHOLD": 0.3,
@@ -68,21 +68,21 @@ class TrackingState(BaseModel):
 class InterviewAgentResponse(BaseModel):
     thought: str
     response_type: Literal["thought", "action", "answer"]
-    tool: Optional[Literal["switch_agent", "current_date", "user_location"]] = None
+    tool: Optional[Literal["switch_agent", "user_location", "update_state"]] = None
     content: str
     state_updates: Optional[InterviewState] = None
 
 class PlannerAgentResponse(BaseModel):
     thought: str
     response_type: Literal["thought", "action", "answer"]
-    tool: Optional[Literal["switch_agent", "current_date", "user_location"]] = None
+    tool: Optional[Literal["switch_agent","user_location"]] = None
     content: str
     state_updates: Optional[PlannerState] = None
 
 class TrackingAgentResponse(BaseModel):
     thought: str
     response_type: Literal["thought", "action", "answer"]
-    tool: Optional[Literal["current_date", "get_commit_diff", "switch_agent", "get_commit_messages"]] = None
+    tool: Optional[Literal["get_commit_diff", "switch_agent", "get_commit_messages"]] = None
     content: str
     state_updates: Optional[TrackingState] = None
 
@@ -108,6 +108,7 @@ class SessionVariables(BaseModel):
     conv_summary: str = ""
     answer_history: list = []
     agent_states: AgentStates = AgentStates()
+    current_date: str = ""
 
 # Czy da rade jakoś zrobić, żeby zadania w tracking state to były zadania od plannera a w przypadku zmiany zadan w tracking zmianialo sie tez w planner
 
@@ -207,12 +208,10 @@ orchiestrator_info = {
     "tools": [],
 }
 
-additional_orchestrator_info = f"Only switch to other agents from interview_agent when ALL of the following fields in INTERVIEW AGENT STATE are non-empty strings: goal, technologies, deadline, working_style, requirements. If any of these fields are empty string "", keep using interview_agent regardless of what the conversation suggests. Do not infer that information is gathered from conversation text alone — check the actual state fields."
-
 llm = {
     "model": "gemini-3.1-flash-lite",
     "max_output_tokens": 2048,
-    "orchestrator_instruction": f"{orchiestrator_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {orchiestrator_info['agent_duties']}. {additional_orchestrator_info}. {orchiestrator_info['json_answer_description']}",
+    "orchestrator_instruction": f"{orchiestrator_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {orchiestrator_info['agent_duties']}. {orchiestrator_info['json_answer_description']}",
     "interview_agent_instruction": f"{interview_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {interview_agent_info['agent_duties']}. {agent_info['ReAct_workflow']} You can use following tools: {interview_agent_info['tools']} {interview_agent_info['json_answer_description']}. {additional_interview_agent_into}",
     "planner_agent_instruction": f"{planner_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {planner_agent_info['agent_duties']}. {agent_info['ReAct_workflow']} You can use following tools: {planner_agent_info['tools']} {planner_agent_info['json_answer_description']}.",
     "tracking_agent_instruction": f"{tracking_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {tracking_agent_info['agent_duties']}. {agent_info['ReAct_workflow']} You can use following tools: {tracking_agent_info['tools']} {tracking_agent_info['json_answer_description']}.",

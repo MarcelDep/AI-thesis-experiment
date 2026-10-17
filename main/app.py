@@ -4,9 +4,10 @@ import  tools
 import  config
 import  agents
 import  logger
-import  streamlit                          as st
-from    google                             import genai
-from    dotenv                             import load_dotenv
+import  streamlit as st
+from    datetime  import date
+from    google    import genai
+from    dotenv    import load_dotenv
 
 chunk_collection = rag.database_init()
 load_dotenv()
@@ -50,6 +51,7 @@ if "switch_agent_called" not in st.session_state:
 
 if "session_variables_instance" not in st.session_state:
     st.session_state.session_variables_instance = config.SessionVariables()
+    st.session_state.session_variables_instance.current_date = date.today()
 
 if "prompt_variables_instance" not in st.session_state:
     st.session_state.prompt_variables_instance = config.PromptVariables()
@@ -87,7 +89,6 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         st.session_state.prompt_variables_instance.current_ReAct_history = []
         st.session_state.prompt_variables_instance.rag = chunk_collection.query(query_texts=prompt, n_results=3)
         st.session_state.session_variables_instance.answer_history.append(f"USER PROMPT: {prompt}")
-        st.session_state.interview_agent_instance.extract_state(prompt=prompt)
         st.session_state.session_variables_instance.agent_states.interview_agent_state = st.session_state.interview_agent_instance.state
         # Orchestrator choose which agent should response
         orchestrator_decision = agents.orchiestrator(SessionVariables=st.session_state.session_variables_instance, PromptVariables=st.session_state.prompt_variables_instance)

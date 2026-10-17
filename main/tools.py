@@ -2,20 +2,17 @@ import  agents
 import  config
 import  geocoder
 import  requests
-from    datetime import date
 from    google   import genai
 
 client = genai.Client()
-
-def current_date():
-    today = date.today()
-    print(today)
-    return today
 
 def user_location():
     location = geocoder.ip('me')
     print(location)
     return location.latlng
+
+def update_state(interview_agent_instance, prompt):
+    agents.interview_agent_instance.extract_state(prompt)
 
 # Rozwiąż problem manualnego dodawania agentów do promtpa - słownik z statusem kazdego agenta?
 def switch_agent(SessionVariables: config.SessionVariables, PromptVariables: config.PromptVariables) -> config.OrchestratorResponse:

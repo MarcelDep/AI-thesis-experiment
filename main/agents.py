@@ -34,7 +34,7 @@ class Agent(ABC):
             model = config.llm["model"],
             system_instruction = self.system_prompt,
             # Dodaj jakoś zeby były automatycznie odpisuwane state agentów - nie ogólnie agents state tylko PLaner agent state: [state] itp
-            input = f'CONVERSATION SUMMARY: {SessionVariables.conv_summary} LAST 4 MESSAGES: {SessionVariables.answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {PromptVariables.current_ReAct_history} | RAG CONTEXT: {PromptVariables.rag} | AGENT STATEs: {SessionVariables.agent_states} | PROMPT: {PromptVariables.prompt}',
+            input = f'CONVERSATION SUMMARY: {SessionVariables.conv_summary} LAST 4 MESSAGES: {SessionVariables.answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {PromptVariables.current_ReAct_history} | RAG CONTEXT: {PromptVariables.rag} | AGENT STATEs: {SessionVariables.agent_states} | CURRENT DATE: {SessionVariables.current_date} | PROMPT: {PromptVariables.prompt}',
             response_format = self.response_format,
             generation_config={
                 "max_output_tokens": config.llm["max_output_tokens"],
@@ -44,19 +44,10 @@ class Agent(ABC):
         print(f"----AGENT response process used {interaction.usage.total_output_tokens} tokens.")
         print(f"----ACTURAL token usage {interaction.usage.total_output_tokens}")
         response = self.validate_response(interaction.output_text)     
-        # Rozwiąż problem tego, że czasami extrakcja dostanie nadmiarowe info (prompt wtedy kiedy go nie potrzebuje itp - moze ekstrakcja jako interfejs?)
-        if response.response_type == 'answer':
-            match self.agent_type:
-                case "planner_agent":
-                    self.extract_state(generated_answer=interaction.output_text)
-                case "tracking_agent":
-                    self.extract_state(prompt=PromptVariables.prompt, generated_answer=interaction.output_text)
+        if response.state_updates is not None:
+            self.state = self.state.model_copy(update=response.state_updates.model_dump(exclude_defaults=True))
         logger.log_agent_activity(f"{self.agent_type}", response.response_type, response.content, self.state)
         return response
-
-    @abstractmethod
-    def extract_state(self):
-        ...
 
 class InterviewAgent(Agent):
     def __init__(self,):
@@ -91,25 +82,6 @@ class PlannerAgent(Agent):
         self.system_prompt = config.llm['planner_agent_instruction']
         self.response_format = config.llm["planner_agent_response_format"]
         self.validate_response = config.PlannerAgentResponse.model_validate_json
-        self.extract_format = config.llm['planner_agent_extraction_format'] 
-        self.validate_extraction = config.PlannerState.model_validate_json
-
-    def extract_state(self, generated_answer: str,):
-        print(f"----GENERATED answer to extract info from: {generated_answer}")
-        system_instruction = f"You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
-        interaction = client.interactions.create(
-            model = config.llm["model"],
-            system_instruction = system_instruction,
-            input = f"Agent answer you're supposed to extract info form: AGENT ANSWER - {generated_answer}.",
-            response_format = self.extract_format,
-            generation_config={
-                "max_output_tokens": config.llm["max_output_tokens"],
-            },
-        )
-        response = self.validate_extraction(interaction.output_text)     
-        self.state = self.state.model_copy(update=response.model_dump(exclude_defaults=True))
-        print(f"----EXTRACTION of {self.agent_type} state: {self.state}")
-        print(f"----EXTRACTION process used {interaction.usage.total_output_tokens} tokens.")
 
 class TrackingAgent(Agent):
     def __init__(self,):
@@ -118,26 +90,6 @@ class TrackingAgent(Agent):
         self.system_prompt = config.llm['tracking_agent_instruction']
         self.response_format = config.llm["tracking_agent_response_format"]
         self.validate_response = config.TrackingAgentResponse.model_validate_json
-        self.extract_format = config.llm['tracking_agent_task_extraction_format'] 
-        self.validate_extraction = config.TrackingState.model_validate_json
-
-    def extract_state(self, generated_answer: str, prompt: str):
-        print(f"----GENERATED answer to extract info from: {generated_answer}")
-        print(f"----PROMPT to extract info from: {prompt}")
-        system_instruction = f"You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
-        interaction = client.interactions.create(
-            model = config.llm["model"],
-            system_instruction = system_instruction,
-            input = f"Agent answer and tool output (if empty - none tool was called) from which you're supposed to extract info form: AGENT ANSWER - {generated_answer} PROMPT - {prompt}",
-            response_format = self.extract_format,
-            generation_config={
-                "max_output_tokens": config.llm["max_output_tokens"],
-            },
-        )
-        response = self.validate_extraction(interaction.output_text)     
-        self.state = self.state.model_copy(update=response.model_dump(exclude_defaults=True))
-        print(f"----EXTRACTION of {self.agent_type} state: {self.state}")
-        print(f"----EXTRACTION process used {interaction.usage.total_output_tokens} tokens.")
 
 def summarize(summary: str, answer_history: list,) -> str:
     interaction = client.interactions.create(
