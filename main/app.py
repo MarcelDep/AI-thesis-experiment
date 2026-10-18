@@ -97,61 +97,63 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         st.session_state.current_agent = orchestrator_decision.agent
     # If model previous message has been an action
     if st.session_state.previous_response_type == 'action':
-        # If tool is current_date
-        elif st.session_state.previous_tool == 'current_date':
-            date = tools.current_date()
-            prompt = f"current_date tool RESPONSE: {date}"
-        # If tool is user_location
-        elif st.session_state.previous_tool == 'user_location':
-            location = tools.user_location()
-            prompt = f"user_location tool RESPONSE: {location}"
-        # If tool is switch_agent
-        elif st.session_state.previous_tool == 'switch_agent':
-            # If switch_agent wasn't called previously
-            if st.session_state.switch_agent_called == False:
-                st.session_state.switch_agent_called = True
-                orchestrator_decision = tools.switch_agent(SessionVariables=st.session_state.session_variables_instance, PromptVariables=st.session_state.prompt_variables_instance)
-                st.session_state.current_agent = orchestrator_decision.agent
-                prompt = f"Continue based on conversation history. Orchestration decision with justification: {orchestrator_decision}"
-            # If switch_agent was called previously
-            else:
-                prompt = f"You have been selected by the orchestrator to respond. Continue the conversation directly. Do NOT call switch_agent."
-        # If tool is get_commit_messages
-        elif st.session_state.previous_tool == 'get_commit_messages':
-            # If creds are empty or invalid
-            if st.session_state.github_variables_instance.repo == "" or st.session_state.github_variables_instance.owner == "":
-                print("You need to provide GitHub creditials before calling github related tools.")
-                prompt = "ERROR - NO GITHUB CREDITIALS - Inform user that they need to provide GitHub creditials before calling github related tools."
-            # If they're correct
-            else:
-                commit_messages = tools.get_commit_messages(GithubVariables=st.session_state.github_variables_instance)
-                print(st.session_state.tracking_agent_instance)
-                st.session_state.tracking_agent_instance.state.commits_msg_sha = commit_messages
-                prompt = f"get_commit_messages tool RESPONSE: {commit_messages}"
-        # If tool is get_commit_diff
-        elif st.session_state.previous_tool == 'get_commit_diff':
-            # If creds are empty or invalid
-            if st.session_state.github_variables_instance.repo == "" or st.session_state.github_variables_instance.owner == "":
-                print("You need to provide GitHub creditials before calling github related tools.")
-                prompt = "ERROR - NO GITHUB CREDITIALS - Inform user that they need to provide GitHub creditials before calling github related tools."
-            # If they're correct
-            else:
-                # If model has info about commit's shas
-                if st.session_state.tracking_agent_instance.state.commits_msg_sha != []:
-                    commit_diff = tools.get_commit_diff(GithubVariables=st.session_state.github_variables_instance, SessionVariables=st.session_state.session_variables_instance, PromptVariables=st.session_state.prompt_variables_instance)
-                    prompt = f"get_commit_diif tool RESPONSE: {commit_diff}"
-                # If not
-                else: 
-                    prompt = f"ERROR: There aren't any commits messages in Tracking Agent state. You need to get users commits first with get_commit_messages before trying to diff two commits."
-                    print(f"ERROR: There aren't any commits messages in Tracking Agent state. You need to get users commits first with get_commit_messages before trying to diff two commits.")
-        # If tool is update_state
-        elif st.session_state.previous_tool == 'update_state':
-            update_state(interview_agent_instance=, prompt=prompt)
-        # Else - call an error
-        else:
-            error_msg = f"ERROR: {st.session_state.previous_response_type}"
-            logger.log_errors(error_msg)
-            prompt = f"UKNOWN ERROR. Previous response_type was: {st.session_state.previous_response_type}"
+        match st.session_state.previous_tool: 
+            # If tool is current_date
+            case 'current_date':
+                date = tools.current_date()
+                prompt = f"current_date tool RESPONSE: {date}"
+            # If tool is user_location
+            case 'user_location':
+                location = tools.user_location()
+                prompt = f"user_location tool RESPONSE: {location}"
+            # If tool is switch_agent
+            case 'switch_agent':
+                # If switch_agent wasn't called previously
+                if st.session_state.switch_agent_called == False:
+                    st.session_state.switch_agent_called = True
+                    orchestrator_decision = tools.switch_agent(SessionVariables=st.session_state.session_variables_instance, PromptVariables=st.session_state.prompt_variables_instance)
+                    st.session_state.current_agent = orchestrator_decision.agent
+                    prompt = f"Continue based on conversation history. Orchestration decision with justification: {orchestrator_decision}"
+                # If switch_agent was called previously
+                else:
+                    prompt = f"You have been selected by the orchestrator to respond. Continue the conversation directly. Do NOT call switch_agent."
+            # If tool is get_commit_messages
+            case 'get_commit_messages':
+                # If creds are empty or invalid
+                if st.session_state.github_variables_instance.repo == "" or st.session_state.github_variables_instance.owner == "":
+                    print("You need to provide GitHub creditials before calling github related tools.")
+                    prompt = "ERROR - NO GITHUB CREDITIALS - Inform user that they need to provide GitHub creditials before calling github related tools."
+                # If they're correct
+                else:
+                    commit_messages = tools.get_commit_messages(GithubVariables=st.session_state.github_variables_instance)
+                    print(st.session_state.tracking_agent_instance)
+                    st.session_state.tracking_agent_instance.state.commits_msg_sha = commit_messages
+                    prompt = f"get_commit_messages tool RESPONSE: {commit_messages}"
+            # If tool is get_commit_diff
+            case 'get_commit_diff':
+                # If creds are empty or invalid
+                if st.session_state.github_variables_instance.repo == "" or st.session_state.github_variables_instance.owner == "":
+                    print("You need to provide GitHub creditials before calling github related tools.")
+                    prompt = "ERROR - NO GITHUB CREDITIALS - Inform user that they need to provide GitHub creditials before calling github related tools."
+                # If they're correct
+                else:
+                    # If model has info about commit's shas
+                    if st.session_state.tracking_agent_instance.state.commits_msg_sha != []:
+                        commit_diff = tools.get_commit_diff(GithubVariables=st.session_state.github_variables_instance, SessionVariables=st.session_state.session_variables_instance, PromptVariables=st.session_state.prompt_variables_instance)
+                        prompt = f"get_commit_diif tool RESPONSE: {commit_diff}"
+                    # If not
+                    else: 
+                        prompt = f"ERROR: There aren't any commits messages in Tracking Agent state. You need to get users commits first with get_commit_messages before trying to diff two commits."
+                        print(f"ERROR: There aren't any commits messages in Tracking Agent state. You need to get users commits first with get_commit_messages before trying to diff two commits.")
+            # If tool is update_state
+            case 'update_state':
+                match st.session_state.current_agent:
+                    case "interview_agent":
+                        update_state(agent_instance=st.session_state.interview_agent_instance, prompt=prompt)
+                    case "planner_agent":
+                        update_state(agent_instance=st.session_state.planner_agent_instance, prompt=prompt)
+                    case "tracking_agent":
+                        update_state(agent_instance=st.session_state.tracking_agent_instance, prompt=prompt)
     
     # Check which agent was chosed to answer, if none of availeble call an error
     if st.session_state.current_agent not in available_agents:
