@@ -11,8 +11,8 @@ def user_location():
     print(location)
     return location.latlng
 
-def update_state(interview_agent_instance, prompt):
-    agents.interview_agent_instance.extract_state(prompt)
+def update_state(agent_instance, prompt):
+    agents.agent_instance.extract_state(prompt)
 
 # Rozwiąż problem manualnego dodawania agentów do promtpa - słownik z statusem kazdego agenta?
 def switch_agent(SessionVariables: config.SessionVariables, PromptVariables: config.PromptVariables) -> config.OrchestratorResponse:
