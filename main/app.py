@@ -89,52 +89,69 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         st.session_state.prompt_variables_instance.current_ReAct_history = []
         st.session_state.prompt_variables_instance.rag = chunk_collection.query(query_texts=prompt, n_results=3)
         st.session_state.session_variables_instance.answer_history.append(f"USER PROMPT: {prompt}")
+        if any(value == "" for value in st.session_state.interview_agent_instance.state.model_dump().values()):
+            st.session_state.interview_agent_instance.extract_state(prompt=prompt)
         st.session_state.session_variables_instance.agent_states.interview_agent_state = st.session_state.interview_agent_instance.state
         # Orchestrator choose which agent should response
         orchestrator_decision = agents.orchiestrator(SessionVariables=st.session_state.session_variables_instance, PromptVariables=st.session_state.prompt_variables_instance)
         st.session_state.current_agent = orchestrator_decision.agent
-    # If model previous message has been an action - more specifically current_date tool call
-    elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'current_date':
-        date = tools.current_date()
-        prompt = f"current_date tool RESPONSE: {date}"
-    # If model previous message has been an action - more specifically user_location tool call
-    elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'user_location':
-        location = tools.user_location()
-        prompt = f"user_location tool RESPONSE: {location}"
-    # If model previous message has been an action - more specifically switch_agent tool call
-    elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'switch_agent':
-        if st.session_state.switch_agent_called == False:
-            st.session_state.switch_agent_called = True
-            orchestrator_decision = tools.switch_agent(SessionVariables=st.session_state.session_variables_instance, PromptVariables=st.session_state.prompt_variables_instance)
-            st.session_state.current_agent = orchestrator_decision.agent
-            prompt = f"Continue based on conversation history. Orchestration decision with justification: {orchestrator_decision}"
+    # If model previous message has been an action
+    if st.session_state.previous_response_type == 'action':
+        # If tool is current_date
+        elif st.session_state.previous_tool == 'current_date':
+            date = tools.current_date()
+            prompt = f"current_date tool RESPONSE: {date}"
+        # If tool is user_location
+        elif st.session_state.previous_tool == 'user_location':
+            location = tools.user_location()
+            prompt = f"user_location tool RESPONSE: {location}"
+        # If tool is switch_agent
+        elif st.session_state.previous_tool == 'switch_agent':
+            # If switch_agent wasn't called previously
+            if st.session_state.switch_agent_called == False:
+                st.session_state.switch_agent_called = True
+                orchestrator_decision = tools.switch_agent(SessionVariables=st.session_state.session_variables_instance, PromptVariables=st.session_state.prompt_variables_instance)
+                st.session_state.current_agent = orchestrator_decision.agent
+                prompt = f"Continue based on conversation history. Orchestration decision with justification: {orchestrator_decision}"
+            # If switch_agent was called previously
+            else:
+                prompt = f"You have been selected by the orchestrator to respond. Continue the conversation directly. Do NOT call switch_agent."
+        # If tool is get_commit_messages
+        elif st.session_state.previous_tool == 'get_commit_messages':
+            # If creds are empty or invalid
+            if st.session_state.github_variables_instance.repo == "" or st.session_state.github_variables_instance.owner == "":
+                print("You need to provide GitHub creditials before calling github related tools.")
+                prompt = "ERROR - NO GITHUB CREDITIALS - Inform user that they need to provide GitHub creditials before calling github related tools."
+            # If they're correct
+            else:
+                commit_messages = tools.get_commit_messages(GithubVariables=st.session_state.github_variables_instance)
+                print(st.session_state.tracking_agent_instance)
+                st.session_state.tracking_agent_instance.state.commits_msg_sha = commit_messages
+                prompt = f"get_commit_messages tool RESPONSE: {commit_messages}"
+        # If tool is get_commit_diff
+        elif st.session_state.previous_tool == 'get_commit_diff':
+            # If creds are empty or invalid
+            if st.session_state.github_variables_instance.repo == "" or st.session_state.github_variables_instance.owner == "":
+                print("You need to provide GitHub creditials before calling github related tools.")
+                prompt = "ERROR - NO GITHUB CREDITIALS - Inform user that they need to provide GitHub creditials before calling github related tools."
+            # If they're correct
+            else:
+                # If model has info about commit's shas
+                if st.session_state.tracking_agent_instance.state.commits_msg_sha != []:
+                    commit_diff = tools.get_commit_diff(GithubVariables=st.session_state.github_variables_instance, SessionVariables=st.session_state.session_variables_instance, PromptVariables=st.session_state.prompt_variables_instance)
+                    prompt = f"get_commit_diif tool RESPONSE: {commit_diff}"
+                # If not
+                else: 
+                    prompt = f"ERROR: There aren't any commits messages in Tracking Agent state. You need to get users commits first with get_commit_messages before trying to diff two commits."
+                    print(f"ERROR: There aren't any commits messages in Tracking Agent state. You need to get users commits first with get_commit_messages before trying to diff two commits.")
+        # If tool is update_state
+        elif st.session_state.previous_tool == 'update_state':
+            update_state(interview_agent_instance=, prompt=prompt)
+        # Else - call an error
         else:
-            prompt = f"You have been selected by the orchestrator to respond. Continue the conversation directly. Do NOT call switch_agent."
-    elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'get_commit_messages':
-        if st.session_state.github_variables_instance.repo == "" or st.session_state.github_variables_instance.owner == "":
-            print("You need to provide GitHub creditials before calling github related tools.")
-            prompt = "ERROR - NO GITHUB CREDITIALS - Inform user that they need to provide GitHub creditials before calling github related tools."
-        else:
-            commit_messages = tools.get_commit_messages(GithubVariables=st.session_state.github_variables_instance)
-            print(st.session_state.tracking_agent_instance)
-            st.session_state.tracking_agent_instance.state.commits_msg_sha = commit_messages
-            prompt = f"get_commit_messages tool RESPONSE: {commit_messages}"
-    elif st.session_state.previous_response_type == 'action' and st.session_state.previous_tool == 'get_commit_diff':
-        if st.session_state.github_variables_instance.repo == "" or st.session_state.github_variables_instance.owner == "":
-            print("You need to provide GitHub creditials before calling github related tools.")
-            prompt = "ERROR - NO GITHUB CREDITIALS - Inform user that they need to provide GitHub creditials before calling github related tools."
-        else:
-            if st.session_state.tracking_agent_instance.state.commits_msg_sha != []:
-                commit_diff = tools.get_commit_diff(GithubVariables=st.session_state.github_variables_instance, SessionVariables=st.session_state.session_variables_instance, PromptVariables=st.session_state.prompt_variables_instance)
-                prompt = f"get_commit_diif tool RESPONSE: {commit_diff}"
-            else: 
-                prompt = f"ERROR: There aren't any commits messages in Tracking Agent state. You need to get users commits first with get_commit_messages before trying to diff two commits."
-                print(f"ERROR: There aren't any commits messages in Tracking Agent state. You need to get users commits first with get_commit_messages before trying to diff two commits.")
-    # Else - call an error
-    else:
-        error_msg = f"ERROR: {st.session_state.previous_response_type}"
-        logger.log_errors(error_msg)
-        prompt = f"UKNOWN ERROR. Previous response_type was: {st.session_state.previous_response_type}"
+            error_msg = f"ERROR: {st.session_state.previous_response_type}"
+            logger.log_errors(error_msg)
+            prompt = f"UKNOWN ERROR. Previous response_type was: {st.session_state.previous_response_type}"
     
     # Check which agent was chosed to answer, if none of availeble call an error
     if st.session_state.current_agent not in available_agents:
@@ -143,7 +160,6 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
         st.session_state.previous_response_type = "ERROR"
         logger.log_errors(error_msg)
         st.rerun()
-    # Czy da się jakoś pozbyć tej ściany ifów?
     # If interview agent was chosen
     elif st.session_state.current_agent == 'interview_agent':
         interaction = st.session_state.interview_agent_instance.response(SessionVariables=st.session_state.session_variables_instance, PromptVariables=st.session_state.prompt_variables_instance)
@@ -154,23 +170,26 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
     elif st.session_state.current_agent == 'tracking_agent':
         interaction = st.session_state.tracking_agent_instance.response(SessionVariables=st.session_state.session_variables_instance, PromptVariables=st.session_state.prompt_variables_instance)
 
-    # Save agent response type as session vaviable and make neccesary steps after that
+    # If model generated final answer
     if interaction.response_type == 'answer':
-        if len(st.session_state.session_variables_instance.answer_history) > 2:
+        # If conversation is longer then 20 responses, summarize it
+        if len(st.session_state.session_variables_instance.answer_history) > 20:
             summary = agents.summarize(summary=st.session_state.session_variables_instance.conv_summary, answer_history=st.session_state.session_variables_instance.answer_history,)
             st.session_state.session_variables_instance.conv_summary = st.session_state.session_variables_instance.conv_summary + summary
             print(f"----SUMMARY continuation {summary}")
             print(f"----SUMMARY in session {st.session_state.session_variables_instance.conv_summary}")
             st.session_state.session_variables_instance.answer_history = []
+        # Send message and set proper variable values
         send_msg(role="assistant", text=interaction.content)
         st.session_state.previous_response_type = interaction.response_type
         st.session_state.session_variables_instance.answer_history.append(f"AGENT ANSWER: {interaction.content}")
         st.session_state.switch_agent_called = False
+    # If model generated action
     elif interaction.response_type == 'action':
+        # Set proper varaible values
         st.session_state.previous_tool = interaction.tool
         st.session_state.previous_response_type = interaction.response_type
-    elif interaction.response_type in modelReponses:
-        st.session_state.previous_response_type = interaction.response_type
+    # If model generated uknown message
     else:
         error_msg = f"There was an unexpected ERROR related to generated message_type: {st.session_state.previous_response_type}."
         send_msg(role="assistant", text=f'{error_msg}. Please try again.')
