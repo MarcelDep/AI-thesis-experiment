@@ -44,8 +44,14 @@ class Agent(ABC):
         print(f"----AGENT response process used {interaction.usage.total_output_tokens} tokens.")
         print(f"----ACTURAL token usage {interaction.usage.total_output_tokens}")
         response = self.validate_response(interaction.output_text)
-        if response.state_updates is not None:
-            self.state = self.state.model_copy(update=response.state_updates.model_dump(exclude_defaults=True))
+        if response.update_state == True:
+            match self.agent_type:
+                case "tracking_agent":
+                    self.extract_state(prompt=PromptVariables.prompt)
+                case "planner_agent":
+                    self.extract_state(generated_answer=interaction.output_text)
+                case "tracking_agent":
+                    self.extract_state(prompt=PromptVariables.prompt, generated_answer=interaction.output_text)
         logger.log_agent_activity(f"{self.agent_type}", response.response_type, response.content, self.state)
         return response
 

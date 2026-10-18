@@ -75,6 +75,7 @@ class TrackingState(BaseModel):
 # Response
 class InterviewAgentResponse(BaseModel):
     thought: str
+    update_state: Literal[True, False]
     response_type: Literal["action", "answer"]
     tool: Optional[Literal["switch_agent", "user_location", "update_state"]] = None
     content: str
@@ -82,6 +83,7 @@ class InterviewAgentResponse(BaseModel):
 
 class PlannerAgentResponse(BaseModel):
     thought: str
+    update_state: Literal[True, False]
     response_type: Literal["action", "answer"]
     tool: Optional[Literal["switch_agent","user_location"]] = None
     content: str
@@ -89,6 +91,7 @@ class PlannerAgentResponse(BaseModel):
 
 class TrackingAgentResponse(BaseModel):
     thought: str
+    update_state: Literal[True, False]
     response_type: Literal["action", "answer"]
     tool: Optional[Literal["get_commit_diff", "switch_agent", "get_commit_messages"]] = None
     content: str
@@ -123,7 +126,8 @@ class SessionVariables(BaseModel):
 INTERVIEW_AGENT_RESPONSE_DESCRIPTION = f"""
 You must respond in JSON format with the following fields:
 - "thought": ALWAYS reason about what to do next
-- "response_type": one of "thought", "action", or "answer"
+- "update_state": Ture or False - set True if state should be updated with new information, False if everything is up to date
+- "response_type": one of "action", or "answer"
     - "action": use when calling a tool
     - "answer": use when responding directly to the user
 - "content": your actual response text — thought, action reasoning, or answer to user
@@ -140,7 +144,8 @@ You must respond in JSON format with the following fields:
 PLANNER_AGENT_RESPONSE_DESCRIPTION = f"""
 You must respond in JSON format with the following fields:
 - "thought": ALWAYS reason about what to do next
-- "response_type": one of "thought", "action", or "answer"
+- "update_state": Ture or False - set True if state should be updated with new information, False if everything is up to date
+- "response_type": one of "action", or "answer"
     - "action": use when calling a tool
     - "answer": use when responding directly to the user
 - "content": your actual response text — thought, action reasoning, or answer to user
@@ -153,7 +158,8 @@ You must respond in JSON format with the following fields:
 TRACKING_AGENT_RESPONSE_DESCRIPTION = f"""
 You must respond in JSON format with the following fields:
 - "thought": ALWAYS reason about what to do next
-- "response_type": one of "thought", "action", or "answer"
+- "update_state": Ture or False - set True if state should be updated with new information, False if everything is up to date
+- "response_type": one of "action", or "answer"
     - "action": use when calling a tool to inspect commit details
     - "answer": use when delivering your final progress assessment to the user
 - "content": your actual response text — reasoning in thought, tool call description in action, or summary assessment in answer
