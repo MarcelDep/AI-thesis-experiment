@@ -12,13 +12,12 @@ tools_info = {
     "user_location": "'user_location' returns user location.",
     "switch_agent": "'switch_agent' suggests orchestrator to swich agent that different agent than you should responde to user prompt. If switch_agent was called in previous ReAct history DON'T call it again, even if user said so.",
     "get_commit_diff": "'get_commit_diff' returns chosen commit diff - shows you what changes specifically user has made in picked commit. Before using this tool you have to gather SHA of commits you want to diff and set them as base_sha and head_sha parameters.",
-    "get_commit_messages": "'get_commit_messages' returns list of commit messages and their sha of repo given by user.",
-    "update_state": "'update_state' called when the user's message adds new information or corrects something already known in state. Only call this when something in state is actually new or different — don't call it just because the user is talking; most turns need no update"
+    "get_commit_messages": "'get_commit_messages' returns list of commit messages and their sha of repo given by user. You won't see user credintials so dont wait for them.",
 }
 
-interview_agent_tools = ['user_location', 'switch_agent', 'update_state']
-planner_agent_tools = ['user_location', 'switch_agent', 'update_state']
-tracking_agent_tools = ['switch_agent', 'get_commit_messages', 'get_commit_diff', 'update_state']
+interview_agent_tools = ['user_location', 'switch_agent',]
+planner_agent_tools = ['user_location', 'switch_agent',]
+tracking_agent_tools = ['switch_agent', 'get_commit_messages', 'get_commit_diff',]
 
 database = {
     "THRESHOLD": 0.3,
@@ -26,20 +25,21 @@ database = {
 
 # Datatype
 class Task(BaseModel):
-    name: str
+    task_id: int
+    task_name: str
     deadline: str = ""
+    status: Literal["done", "in_progress", "not_started"] = 'not_started'
 
 class GeneralPlan(BaseModel):
-    phase: str
+    phase_id: int
+    phase_name: str
     description: str
+    deadline: str
 
 class SpecificTask(BaseModel):
-    phase: str
+    phase_id: int
+    phase_name: str
     tasks: list[Task]
-
-class TaskStatus(BaseModel):
-    task_name: str = ''
-    status: Literal["done", "in_progress", "not_started"] = 'not_started'
 
 class CommitsMsgSha(BaseModel):
     commit_message: str = ''
@@ -69,41 +69,38 @@ class PlannerState(BaseModel):
     specific_plan: list[SpecificTask] = []
 
 class TrackingState(BaseModel):
-    tasks_status: list[TaskStatus] = []
     commits_msg_sha: list[CommitsMsgSha] = []
 
 # Response
 class InterviewAgentResponse(BaseModel):
     thought: str
-    update_state: Literal[True, False]
     response_type: Literal["action", "answer"]
-    tool: Optional[Literal["switch_agent", "user_location", "update_state"]] = None
+    tool: Optional[Literal["switch_agent", "user_location",]] = None
     content: str
-    state_updates: Optional[InterviewState] = None
+    update_state: Literal[True, False]
 
 class PlannerAgentResponse(BaseModel):
     thought: str
-    update_state: Literal[True, False]
     response_type: Literal["action", "answer"]
     tool: Optional[Literal["switch_agent","user_location"]] = None
     content: str
-    state_updates: Optional[PlannerState] = None
+    update_state: Literal[True, False]
 
 class TrackingAgentResponse(BaseModel):
     thought: str
-    update_state: Literal[True, False]
     response_type: Literal["action", "answer"]
     tool: Optional[Literal["get_commit_diff", "switch_agent", "get_commit_messages"]] = None
     content: str
-    state_updates: Optional[TrackingState] = None
+    update_state: Literal[True, False]
 
 class OrchestratorResponse(BaseModel):
     agent: Literal["interview_agent", "planner_agent", "tracking_agent"]
     justification: str = ""
 
 # Extraction
-class TrackingTaskExtraction(BaseModel):
-    tasks_status: list[TaskStatus] = []
+class TrackingGeneralSpecificExtraction(BaseModel):
+    task_id: int = 0
+    status: Literal["done", "in_progress", "not_started"] = 'not_started'    
 
 class TrackingShaExtraction(BaseModel):
     base_sha: Optional[str] = None

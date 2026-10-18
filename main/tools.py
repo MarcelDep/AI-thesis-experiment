@@ -9,10 +9,7 @@ client = genai.Client()
 def user_location():
     location = geocoder.ip('me')
     print(location)
-    return location.latlng
-
-def update_state(agent_instance, prompt):
-    agents.agent_instance.extract_state(prompt)
+    return location
 
 # Rozwiąż problem manualnego dodawania agentów do promtpa - słownik z statusem kazdego agenta?
 def switch_agent(SessionVariables: config.SessionVariables, PromptVariables: config.PromptVariables) -> config.OrchestratorResponse:

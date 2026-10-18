@@ -79,18 +79,18 @@ available_tools = ['current_date', 'user_location', 'switch_agent', 'get_commit_
 available_agents = ['interview_agent', 'planner_agent', 'tracking_agent',]
 
 # Trigger when user has send a prompt or when previous message has been a thought or an action
-if prompt := st.chat_input("Type text here") or st.session_state.previous_response_type in modelReponses:
+if user_prompt := st.chat_input("Type text here") or st.session_state.previous_response_type in modelReponses:
     # If user has send a prompt
-    if prompt != None and prompt != True:
-        print(f"----USER: {prompt}")
-        logger.log_user_messages(prompt)
-        send_msg(role="user", text=prompt)
+    if user_prompt != None and user_prompt != True:
+        print(f"----USER: {user_prompt}")
+        logger.log_user_messages(user_prompt)
+        send_msg(role="user", text=user_prompt)
         prompt_variables = config.PromptVariables()
         st.session_state.prompt_variables_instance.current_ReAct_history = []
-        st.session_state.prompt_variables_instance.rag = chunk_collection.query(query_texts=prompt, n_results=3)
-        st.session_state.session_variables_instance.answer_history.append(f"USER PROMPT: {prompt}")
+        st.session_state.prompt_variables_instance.rag = chunk_collection.query(query_texts=user_prompt, n_results=3)
+        st.session_state.session_variables_instance.answer_history.append(f"USER PROMPT: {user_prompt}")
         if any(value == "" for value in st.session_state.interview_agent_instance.state.model_dump().values()):
-            st.session_state.interview_agent_instance.extract_state(prompt=prompt)
+            st.session_state.interview_agent_instance.extract_state(prompt=user_prompt)
         st.session_state.session_variables_instance.agent_states.interview_agent_state = st.session_state.interview_agent_instance.state
         # Orchestrator choose which agent should response
         orchestrator_decision = agents.orchiestrator(SessionVariables=st.session_state.session_variables_instance, PromptVariables=st.session_state.prompt_variables_instance)
@@ -145,15 +145,7 @@ if prompt := st.chat_input("Type text here") or st.session_state.previous_respon
                     else: 
                         prompt = f"ERROR: There aren't any commits messages in Tracking Agent state. You need to get users commits first with get_commit_messages before trying to diff two commits."
                         print(f"ERROR: There aren't any commits messages in Tracking Agent state. You need to get users commits first with get_commit_messages before trying to diff two commits.")
-            # If tool is update_state
-            case 'update_state':
-                match st.session_state.current_agent:
-                    case "interview_agent":
-                        update_state(agent_instance=st.session_state.interview_agent_instance, prompt=prompt)
-                    case "planner_agent":
-                        update_state(agent_instance=st.session_state.planner_agent_instance, prompt=prompt)
-                    case "tracking_agent":
-                        update_state(agent_instance=st.session_state.tracking_agent_instance, prompt=prompt)
+        st.session_state.prompt_variables_instance.current_ReAct_history.append(prompt)
     
     # Check which agent was chosed to answer, if none of availeble call an error
     if st.session_state.current_agent not in available_agents:
