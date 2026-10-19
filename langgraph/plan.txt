@@ -95,3 +95,11 @@ Trzeba jakos zmniejszyc ilosc extraction state'u - jakies wczesniejsze ustalenie
 Czy ekstrakcja ma opis tego jakie pola mają do uzupełnienia?
 
 Badania tego ile tokenow zuzywa rozwiazanie a ile z przekazywaniem calej konwersacji
+
+W pociągu przygotuje dwa foldery pod eksperymenty - w main nich jako kontekst będzie podsumowanie, ostatnie 3/4 wiadomosci i state
+w pozostałych będzie 1. sama answer_history, 2 sam state i podsumowanie
+
+w analizie sprawdzisz ile popełniają błędów np. zapominają o wcześniejszych ustaleniach, źle korzystają z tools itp oraz ile zużywają tokentów. Wariant modelu
+który zużyje najmniej tokenów i da najlepsze odpowiedzi
+
+Może dodaj state agentów jako karty do widoku użytkownika w streamlit? dzieki temu użytkownik będzie mógł łatwo zauważyć jak myśli model i ew. coś poprawić odrazu w state agenta

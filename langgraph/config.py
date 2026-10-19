@@ -9,16 +9,16 @@ agents_characteristic = {
 }
 
 tools_info = {
-    "current_date": "'current_date' returns current date - day, month and year in YYYY-MM-DD format. Use it if user gives you a deadline.",
     "user_location": "'user_location' returns user location.",
     "switch_agent": "'switch_agent' suggests orchestrator to swich agent that different agent than you should responde to user prompt. If switch_agent was called in previous ReAct history DON'T call it again, even if user said so.",
     "get_commit_diff": "'get_commit_diff' returns chosen commit diff - shows you what changes specifically user has made in picked commit. Before using this tool you have to gather SHA of commits you want to diff and set them as base_sha and head_sha parameters.",
-    "get_commit_messages": "'get_commit_messages' returns list of commit messages and their sha of repo given by user.",
+    "get_commit_messages": "'get_commit_messages' returns list of commit messages and their sha of repo given by user. You won't see user credintials so dont wait for them.",
+    "modify_tasks_status": "'modify_tasks_status' updates statuses of tasks in the plan based on the commit messages and the last fetched commit diff. Call it AFTER get_commit_messages and/or get_commit_diff when you want to record progress. Takes no parameters."
 }
 
-interview_agent_tools = ['current_date', 'user_location', 'switch_agent']
-planner_agent_tools = ['current_date', 'user_location', 'switch_agent']
-tracking_agent_tools = ['current_date', 'switch_agent', "get_commit_messages", "get_commit_diff"]
+interview_agent_tools = ['user_location', 'switch_agent',]
+planner_agent_tools = ['user_location', 'switch_agent',]
+tracking_agent_tools = ['switch_agent', 'get_commit_messages', 'get_commit_diff', 'modify_tasks_status',]
 
 database = {
     "THRESHOLD": 0.3,
@@ -26,12 +26,21 @@ database = {
 
 # Datatype
 class Task(BaseModel):
-    name: str
+    task_id: int
+    task_name: str
     deadline: str = ""
-
-class TaskStatus(BaseModel):
-    task_name: str = ''
     status: Literal["done", "in_progress", "not_started"] = 'not_started'
+
+class GeneralPlan(BaseModel):
+    phase_id: int
+    phase_name: str
+    description: str
+    deadline: str
+
+class SpecificTask(BaseModel):
+    phase_id: int
+    phase_name: str
+    tasks: list[Task]
 
 class CommitsMsgSha(BaseModel):
     commit_message: str = ''
@@ -57,42 +66,42 @@ class InterviewState(BaseModel):
     working_style: str = ""
     
 class PlannerState(BaseModel):
-    general_plan: list[Task] = []
-    specific_plan: list[Task] = []
+    general_plan: list[GeneralPlan] = []
+    specific_plan: list[SpecificTask] = []
 
 class TrackingState(BaseModel):
-    tasks_status: list[TaskStatus] = []
     commits_msg_sha: list[CommitsMsgSha] = []
 
 # Response
 class InterviewAgentResponse(BaseModel):
     thought: str
-    response_type: Literal["thought", "action", "answer"]
-    tool: Optional[Literal["switch_agent", "current_date", "user_location"]] = None
+    response_type: Literal["action", "answer"]
+    tool: Optional[Literal["switch_agent", "user_location",]] = None
     content: str
-    state_updates: Optional[InterviewState] = None
+    update_state: Literal[True, False]
 
 class PlannerAgentResponse(BaseModel):
     thought: str
-    response_type: Literal["thought", "action", "answer"]
-    tool: Optional[Literal["switch_agent", "current_date", "user_location"]] = None
+    response_type: Literal["action", "answer"]
+    tool: Optional[Literal["switch_agent","user_location"]] = None
     content: str
-    state_updates: Optional[PlannerState] = None
+    update_state: Literal[True, False]
 
 class TrackingAgentResponse(BaseModel):
     thought: str
-    response_type: Literal["thought", "action", "answer"]
-    tool: Optional[Literal["current_date", "get_commit_diff", "switch_agent", "get_commit_messages"]] = None
+    response_type: Literal["action", "answer"]
+    tool: Optional[Literal["get_commit_diff", "switch_agent", "get_commit_messages", "modify_tasks_status",]] = None
     content: str
-    state_updates: Optional[TrackingState] = None
+    update_state: Literal[True, False]
 
 class OrchestratorResponse(BaseModel):
     agent: Literal["interview_agent", "planner_agent", "tracking_agent"]
     justification: str = ""
 
 # Extraction
-class TrackingTaskExtraction(BaseModel):
-    tasks_status: list[TaskStatus] = []
+class TrackingExtraction(BaseModel):
+    task_id: list[int]
+    status: list[Literal["done", "in_progress", "not_started"]]
 
 class TrackingShaExtraction(BaseModel):
     base_sha: Optional[str] = None
@@ -108,13 +117,15 @@ class SessionVariables(BaseModel):
     conv_summary: str = ""
     answer_history: list = []
     agent_states: AgentStates = AgentStates()
+    current_date: str = ""
 
 # Czy da rade jakoś zrobić, żeby zadania w tracking state to były zadania od plannera a w przypadku zmiany zadan w tracking zmianialo sie tez w planner
 
 INTERVIEW_AGENT_RESPONSE_DESCRIPTION = f"""
 You must respond in JSON format with the following fields:
 - "thought": ALWAYS reason about what to do next
-- "response_type": one of "thought", "action", or "answer"
+- "update_state": Ture or False - set True if state should be updated with new information, False if everything is up to date
+- "response_type": one of "action", or "answer"
     - "action": use when calling a tool
     - "answer": use when responding directly to the user
 - "content": your actual response text — thought, action reasoning, or answer to user
@@ -131,7 +142,8 @@ You must respond in JSON format with the following fields:
 PLANNER_AGENT_RESPONSE_DESCRIPTION = f"""
 You must respond in JSON format with the following fields:
 - "thought": ALWAYS reason about what to do next
-- "response_type": one of "thought", "action", or "answer"
+- "update_state": Ture or False - set True if state should be updated with new information, False if everything is up to date
+- "response_type": one of "action", or "answer"
     - "action": use when calling a tool
     - "answer": use when responding directly to the user
 - "content": your actual response text — thought, action reasoning, or answer to user
@@ -144,7 +156,8 @@ You must respond in JSON format with the following fields:
 TRACKING_AGENT_RESPONSE_DESCRIPTION = f"""
 You must respond in JSON format with the following fields:
 - "thought": ALWAYS reason about what to do next
-- "response_type": one of "thought", "action", or "answer"
+- "update_state": Ture or False - set True if state should be updated with new information, False if everything is up to date
+- "response_type": one of "action", or "answer"
     - "action": use when calling a tool to inspect commit details
     - "answer": use when delivering your final progress assessment to the user
 - "content": your actual response text — reasoning in thought, tool call description in action, or summary assessment in answer
@@ -184,8 +197,6 @@ interview_agent_info = {
     "tools": [tools_info[tool] for tool in interview_agent_tools],
 }
 
-additional_interview_agent_into = "When all required project information has been gathered (goal, technologies, deadline, working_style, requirements), do NOT send an answer message to the user. Instead, send an action turn calling switch_agent immediately."
-
 planner_agent_info = {
     "agent_description": "You're a planner agent",
     "agent_duties": "You're task is to plan tasks for user based on information interview_agent gathered from interview with user",
@@ -208,6 +219,8 @@ orchiestrator_info = {
 }
 
 additional_orchestrator_info = f"Only switch to other agents from interview_agent when ALL of the following fields in INTERVIEW AGENT STATE are non-empty strings: goal, technologies, deadline, working_style, requirements. If any of these fields are empty string "", keep using interview_agent regardless of what the conversation suggests. Do not infer that information is gathered from conversation text alone — check the actual state fields."
+additional_interview_agent_into = f"When whole infomration in InerviewAgent state is filled, call switch_agent tool. Else, keep askign for missing info untill state is full."
+additional_tracking_agent_info = f"If you've requested diff or commit messeges in previous messages in current ReAct history, then don't request it again."
 
 llm = {
     "model": "gemini-3.1-flash-lite",
@@ -222,6 +235,6 @@ llm = {
     "tracking_agent_response_format": {"type": "text", "mime_type": "application/json", "schema": TrackingAgentResponse.model_json_schema()},
     "interview_agent_extraction_format": {"type": "text", "mime_type": "application/json", "schema": InterviewState.model_json_schema()},
     "planner_agent_extraction_format":  {"type": "text", "mime_type": "application/json", "schema": PlannerState.model_json_schema()},
-    "tracking_agent_task_extraction_format": {"type": "text", "mime_type": "application/json", "schema": TrackingTaskExtraction.model_json_schema()},    
+    "tracking_agent_task_extraction_format": {"type": "text", "mime_type": "application/json", "schema": TrackingExtraction.model_json_schema()},    
     "tracking_agent_sha_extraction_format": {"type": "text", "mime_type": "application/json", "schema": TrackingShaExtraction.model_json_schema()},    
 }

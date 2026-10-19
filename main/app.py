@@ -86,6 +86,7 @@ if user_prompt := st.chat_input("Type text here") or st.session_state.previous_r
         logger.log_user_messages(user_prompt)
         send_msg(role="user", text=user_prompt)
         prompt_variables = config.PromptVariables()
+        st.session_state.prompt_variables_instance.prompt = user_prompt
         st.session_state.prompt_variables_instance.current_ReAct_history = []
         st.session_state.prompt_variables_instance.rag = chunk_collection.query(query_texts=user_prompt, n_results=3)
         st.session_state.session_variables_instance.answer_history.append(f"USER PROMPT: {user_prompt}")
@@ -145,6 +146,21 @@ if user_prompt := st.chat_input("Type text here") or st.session_state.previous_r
                     else: 
                         prompt = f"ERROR: There aren't any commits messages in Tracking Agent state. You need to get users commits first with get_commit_messages before trying to diff two commits."
                         print(f"ERROR: There aren't any commits messages in Tracking Agent state. You need to get users commits first with get_commit_messages before trying to diff two commits.")
+            case 'modify_tasks_status':
+                modified_statuses = tools.modify_tasks_status(planner_state=st.session_state.planner_agent_instance.state, commits_msg_sha=st.session_state.tracking_agent_instance.state.commits_msg_sha, diff='',)
+                for update in modified_statuses:
+                    for task_to_update in st.session_state.planner_agent_instance.state.specific_plan.tasks:
+                        if update.task_id == task_to_update.task_id:     
+                            task_to_update["status"] == update["status"]
+                
+                for phase in planner_state.general_plan:
+                    statuses = [t.status for t in planner_state.specific_plan if t.phase_id == phase.phase_id]
+                    if statuses and all(s == "done" for s in statuses):
+                        phase.status = "done"
+                    elif any(s != "not_started" for s in statuses):
+                        phase.status = "in_progress"
+                    else:
+                        phase.status = "not_started"
         st.session_state.prompt_variables_instance.current_ReAct_history.append(prompt)
     
     # Check which agent was chosed to answer, if none of availeble call an error

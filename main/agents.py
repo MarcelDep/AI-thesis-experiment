@@ -117,7 +117,14 @@ class TrackingAgent(Agent):
         self.agent_type = "tracking_agent"
         self.state = config.TrackingState()
         self.system_prompt = config.llm['tracking_agent_instruction']
-       extract_state(self, generated_answer: str, prompt: str):
+        self.response_format = config.llm["tracking_agent_response_format"]
+        self.validate_response = config.TrackingAgentResponse.model_validate_json
+        self.extract_format = config.llm['tracking_agent_task_extraction_format'] 
+        self.validate_extraction = config.TrackingState.model_validate_json
+        self.sha_extraxtion_format = config.llm["tracking_agent_sha_extraction_format"]
+        self.sha_extraction_validation = config.TrackingShaExtraction.model_validate_json
+
+    def extract_state(self, generated_answer: str, prompt: str):
         print(f"----GENERATED answer to extract info from: {generated_answer}")
         print(f"----PROMPT to extract info from: {prompt}")
         system_instruction = f"You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
@@ -134,25 +141,6 @@ class TrackingAgent(Agent):
         self.state = self.state.model_copy(update=response.model_dump(exclude_defaults=True))
         print(f"----EXTRACTION of {self.agent_type} state: {self.state}")
         print(f"----EXTRACTION process used {interaction.usage.total_output_tokens} tokens.")
-
-    def modify_tasks_status(self, general_plan: config.GeneralPlan, specific_plan: config.SpecificTask, commits_msg_sha: config.CommitsMsgSha)
-        system_instruction = "You're task status update assistant. In your context there are two plans: general_plan and specific_plan. Both plans has tasks status for each phase. Based on user's commits or commit diff you need to update tasks status. Change only task status field. If you're not sure about task status - leave as it is."
-        interaction = client.interactions.create(
-            model = config.llm["model"],
-            system_instruction = system_instruction,
-            input = f"GENERAL PLAN: {general_plan}. SPECIFIC PLAN {specific_plan}. COMMIT MESSAGES: {commits_msg_sha}",
-            response_format = config.llm['planner_agent_extraction_format'],
-            generation_config={
-                "max_output_tokens": config.llm["max_output_tokens"],
-            },
-        )
-        response = config.PlannerState.model_validate_json(interaction.output_text)     
-        PlannerAgent.state = PlannerAgent.state.model_copy(update=response.model_dump(exclude_defaults=True))
-        print(f"----PLANS with updated statuses {PlannerAgent.state}")
-        print(f"----STATE update function used {interaction.usage.total_output_tokens} tokens.") self.response_format = config.llm["tracking_agent_response_format"]
-        self.validate_response = config.TrackingAgentResponse.model_validate_json
-        self.extract_format = config.llm['tracking_agent_task_extraction_format'] 
-        self.validate_extraction = config.TrackingState.model_validate_json
 
 def summarize(summary: str, answer_history: list,) -> str:
     interaction = client.interactions.create(
