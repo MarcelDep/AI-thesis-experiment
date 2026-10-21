@@ -8,139 +8,137 @@ client = genai.Client()
 
 chunk_collection = rag.database_init()
 
-# Czy orchiestrator potrzebuje state tracking agenta i plannera? Moze uzyj jev'a do tego 
-def orchiestrator(SessionVariables: config.SessionVariables, PromptVariables: config.PromptVariables) -> config.OrchestratorResponse:
-    interaction = client.interactions.create(
-        model = config.llm["model"],
-        system_instruction = config.llm["orchestrator_instruction"],
-        input = f'CONVERSATION SUMMARY: {SessionVariables.conv_summary} LAST 4 MESSAGES: {SessionVariables.answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {PromptVariables.current_ReAct_history}, INTERVIEW AGENT STATE: {SessionVariables.agent_states.interview_agent_state}, PLANNER AGENT STATE: {SessionVariables.agent_states.planner_agent_state}, TRACKING AGENT STATE: {SessionVariables.agent_states.tracking_agent_state}, PROMPT: {PromptVariables.prompt}',
-        response_format = config.llm["orchestrator_response_format"],
-        generation_config={
-            "max_output_tokens": config.llm["max_output_tokens"],
-        },
-    )
+llm = init_chat_model(
+    "gemini-3.1-flash-lite",
+    model_provider="google_genai",
+)
 
-    decision = config.OrchestratorResponse.model_validate_json(interaction.output_text)
-    logger.log_orchestrator_activity(decision.agent, decision.justification)
-    print(f"----ORCHESTRATOR choosed agent: {decision}")
-    print(f"----ORCHESTRATOR decision process used {interaction.usage.total_output_tokens} tokens.")
-    return decision
+class Agent():
+    def response(state: config.State) -> str:
+        print(f"----AGENT {state.choosed_agent} sees following state before response: {state.state}.")
+        print(f"----AGENT {state.choosed_agent} sees following ReAct history as a context: {PromptVariables.current_ReAct_history}.")      
+        prompt = state["messages"][-1]
 
-class Agent(ABC):
-    def response(self, SessionVariables: config.SessionVariables, PromptVariables: config.PromptVariables) -> str:
-        print(f"----AGENT {self.agent_type} sees following state before response: {self.state}.")
-        print(f"----AGENT {self.agent_type} sees following ReAct history as a context: {PromptVariables.current_ReAct_history}.")      
-        interaction = client.interactions.create(
-            model = config.llm["model"],
-            system_instruction = self.system_prompt,
-            # Dodaj jakoś zeby były automatycznie odpisuwane state agentów - nie ogólnie agents state tylko PLaner agent state: [state] itp
-            input = f'CONVERSATION SUMMARY: {SessionVariables.conv_summary} LAST 4 MESSAGES: {SessionVariables.answer_history}, ReAct HISTORY FROM NEWEST USER PROMPT: {PromptVariables.current_ReAct_history} | RAG CONTEXT: {PromptVariables.rag} | AGENT STATEs: {SessionVariables.agent_states} | CURRENT DATE: {SessionVariables.current_date} | PROMPT: {PromptVariables.prompt}',
-            response_format = self.response_format,
-            generation_config={
-                "max_output_tokens": config.llm["max_output_tokens"],
+        agent_llm - llm.with_structured_output(self.agent_response)
+
+        response = agent_llm.invoke([
+            {
+                "role": "system",
+                "content": self.agent_instruction
             },
-        )
-        print(f"----AGENT {self.agent_type} response: ", interaction.output_text)
-        print(f"----AGENT response process used {interaction.usage.total_output_tokens} tokens.")
-        print(f"----ACTURAL token usage {interaction.usage.total_output_tokens}")
-        response = self.validate_response(interaction.output_text)
+            {"role": "user", "content": f"CONVERSATION SUMMARY: {state["conv_summary"]}. MESSAGES: {state["messages"]}, PREVIOUS THOUGHTs: {state["previous_thought"]}. RAG CONTEXT: {state["rag"]}. INTERVIEW AGENT STATE: {state["interview_state"]}. PLANNER AGENT STATE: {state["planner_state"]}. TRACKING AGENT STATE: {state["tracking_state"]}. CURRENT DATE: {state["current_date"]}. USER PROMPT: {state["messages"][-1]}"}
+        ])
+        print(f"----AGENT {state.choosed_agent} response: ", response.content)
+        # print(f"----AGENT response process used {interaction.usage.total_output_tokens} tokens.")
         if response.update_state == True:
-            match self.agent_type:
+            match state.choosed_agent:
                 case "interview_agent":
-                    self.extract_state(prompt=PromptVariables.prompt)
+                    self.extract_state()
                 case "planner_agent":
-                    self.extract_state(generated_answer=interaction.output_text)
+                    self.extract_state(generated_answer=response.content)
                 case "tracking_agent":
-                    self.extract_state(prompt=PromptVariables.prompt, generated_answer=interaction.output_text)
-        logger.log_agent_activity(f"{self.agent_type}", response.response_type, response.content, self.state)
-        return response
+                    self.extract_state(generated_answer=response.content)
+        return response.content
 
     @abstractmethod
     def extract_state(self):
         ...
 
-class InterviewAgent(Agent):
-    def __init__(self,):
-        self.agent_type = "interview_agent"
-        self.state = config.InterviewState()
-        self.system_prompt = config.llm['interview_agent_instruction']
-        self.response_format = config.llm["interview_agent_response_format"]
-        self.validate_response = config.InterviewAgentResponse.model_validate_json  
-        self.extract_format = config.llm['interview_agent_extraction_format'] 
-        self.validate_extraction = config.InterviewState.model_validate_json
+def router(state: config.State):
+    prompt = state["messages"][-1]
+    conv_history = state["messages"]
+    previous_thought = state["previous_thought"]
+    interview_state = state["interview_state"]
+    planner_state = state["planner_state"]
+    tracking_state = state["tracking_state"]
 
-    def extract_state(self, prompt: str):
-        system_instruction = f"You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
-        interaction = client.interactions.create(
-            model = config.llm["model"],
-            system_instruction = system_instruction,
-            input = f"User prompt from which you're supposed to extract info form: {prompt}.",
-            response_format = self.extract_format,
-            generation_config={
-                "max_output_tokens": config.llm["max_output_tokens"],
+    router_llm = llm.with_structured_output(config.RouterResponse)
+
+    decision = router_llm.invoke([
+        {
+            "role": "system",
+            "content": config.llm.router_instruction
+        },
+        {"role": "user", "content": f"USER PROMPT: {prompt}. CONVERSATION HISTORY: {conv_history}. PREVIOUS THOUGHTs: {previous_thought}. INTERVIEW AGENT STATE: {interview_state}. PLANNER AGENT STATE: {planner_state}. TRACKING AGENT STATE: {tracking_state}"}
+    ])
+
+    print(f"----ROUTER picked {decision.choosed_agent} to respond because {decision.justification}.")
+    return {"choosed_agent": decision.choosed_agent}
+
+class InterviewAgent(Agent):
+    def __init__(self):
+        self.agent_response = config.InterviewResponse()
+        self.agent_instruction = config.llm["interview_agent_instruction"]
+        self.agent_extraction = config.InterviewExtraction()
+
+    def interview_agent(state: config.State):
+        interview_response = response(state=state)
+        return interview_response
+
+    def extract_state(self, state: config.State):
+        prompt = state["messages"][-1]
+        extract_llm = llm.with_structured_output(self.agent_extraction)
+
+        response = extract_llm.invoke([
+            {
+                "role": "system",
+                "content": f"You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
             },
-        )
-        response = self.validate_extraction(interaction.output_text)     
-        self.state = self.state.model_copy(update=response.model_dump(exclude_defaults=True))
-        print(f"----EXTRACTION of {self.agent_type} state: {self.state}")
-        print(f"----EXTRACTION process used {interaction.usage.total_output_tokens} tokens.")
+            {"role": "user", "content": f"User prompt from which you're supposed to extract info form: {prompt}."}
+        ])
+
+        print(f"----EXTRACTION of {state.choosed_agent} state: {response.content}")
+        return {"interview_state": response.content}
 
 class PlannerAgent(Agent):
-    def __init__(self,):
-        self.agent_type = "planner_agent"
-        self.state = config.PlannerState()
-        self.system_prompt = config.llm['planner_agent_instruction']
-        self.response_format = config.llm["planner_agent_response_format"]
-        self.validate_response = config.PlannerAgentResponse.model_validate_json
-        self.extract_format = config.llm['planner_agent_extraction_format'] 
-        self.validate_extraction = config.PlannerState.model_validate_json
+    def __init__(self):
+        self.agent_response = config.PlannerResponse()
+        self.agent_instruction = config.llm["planner_agent_instruction"]
+        self.agent_extraction = config.PlannerExtraction()
 
-    def extract_state(self, generated_answer: str,):
-        print(f"----GENERATED answer to extract info from: {generated_answer}")
-        system_instruction = f"You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields. If you want to extract certain parts of plan (e.g. phase 2) dont remove others (e.g. phase 1). You can: update egzisting phase, add new one or remove it if you think its not relevant enymore."
-        interaction = client.interactions.create(
-            model = config.llm["model"],
-            system_instruction = system_instruction,
-            input = f"CURRENT AGENT STATE: {self.state}. Agent answer you're supposed to extract info form: AGENT ANSWER - {generated_answer}.",
-            response_format = self.extract_format,
-            generation_config={
-                "max_output_tokens": config.llm["max_output_tokens"],
+    def planner_agent(state: config.State):
+        planner_response = response(state=state)
+        return planner_response
+
+    def extract_state(self, state: config.State, generated_answer: str,):
+        prompt = state["messages"][-1]
+        extract_llm = llm.with_structured_output(self.agent_extraction)
+
+        response = extract_llm.invoke([
+            {
+                "role": "system",
+                "content": f"You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
             },
-        )
-        response = self.validate_extraction(interaction.output_text)     
-        self.state = self.state.model_copy(update=response.model_dump(exclude_defaults=True))
-        print(f"----EXTRACTION of {self.agent_type} state: {self.state}")
-        print(f"----EXTRACTION process used {interaction.usage.total_output_tokens} tokens.")
+            {"role": "user", "content": f"CURRENT PLANNER STATE: {state.planner_state}. Agent answer you're supposed to extract info form - {generated_answer}."}
+        ])
+
+        print(f"----EXTRACTION of {state.choosed_agent} state: {response.content}")
+        return {"planner_state": response.content}
 
 class TrackingAgent(Agent):
-    def __init__(self,):
-        self.agent_type = "tracking_agent"
-        self.state = config.TrackingState()
-        self.system_prompt = config.llm['tracking_agent_instruction']
-        self.response_format = config.llm["tracking_agent_response_format"]
-        self.validate_response = config.TrackingAgentResponse.model_validate_json
-        self.extract_format = config.llm['tracking_agent_task_extraction_format'] 
-        self.validate_extraction = config.TrackingState.model_validate_json
-        self.sha_extraxtion_format = config.llm["tracking_agent_sha_extraction_format"]
-        self.sha_extraction_validation = config.TrackingShaExtraction.model_validate_json
+    def __init__(self):
+        self.agent_response = config.TrackingResponse()
+        self.agent_instruction = config.llm["tracking_agent_instruction"]
+        self.agent_extraction = config.TrackingExtraction()
 
-    def extract_state(self, generated_answer: str, prompt: str):
-        print(f"----GENERATED answer to extract info from: {generated_answer}")
-        print(f"----PROMPT to extract info from: {prompt}")
-        system_instruction = f"You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
-        interaction = client.interactions.create(
-            model = config.llm["model"],
-            system_instruction = system_instruction,
-            input = f"Agent answer and tool output (if empty - none tool was called) from which you're supposed to extract info form: AGENT ANSWER - {generated_answer} PROMPT - {prompt}",
-            response_format = self.extract_format,
-            generation_config={
-                "max_output_tokens": config.llm["max_output_tokens"],
+    def tracking_agent(state: config.State):
+        tracking_response = response(state=state)
+        return tracking_response
+
+    def extract_state(self, state: config.State, generated_answer: str):
+        prompt = state["messages"][-1]
+        extract_llm = llm.with_structured_output(self.agent_extraction)
+
+        response = extract_llm.invoke([
+            {
+                "role": "system",
+                "content": f"You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
             },
-        )
-        response = self.validate_extraction(interaction.output_text)     
-        self.state = self.state.model_copy(update=response.model_dump(exclude_defaults=True))
-        print(f"----EXTRACTION of {self.agent_type} state: {self.state}")
-        print(f"----EXTRACTION process used {interaction.usage.total_output_tokens} tokens.")
+            {"role": "user", "content": f"Agent answer and tool output (if empty - none tool was called) from which you're supposed to extract info form: AGENT ANSWER - {generated_answer} PROMPT - {prompt}"}
+        ])
+
+        print(f"----EXTRACTION of {state.choosed_agent} state: {response.content}")
+        return {"tracking_state": response.content}
 
 def summarize(summary: str, answer_history: list,) -> str:
     interaction = client.interactions.create(
@@ -152,4 +150,3 @@ def summarize(summary: str, answer_history: list,) -> str:
         },
     )
     return interaction.output_text
-# Dodaj wymuszenie stworzenia wszystkich powyzszych selfow w kazdej klasie agent za pomoca @abstractmethod

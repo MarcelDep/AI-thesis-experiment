@@ -5,3 +5,5 @@ pydantic
 streamlit
 PyGithub
 python-dotenv
+langgraph
+langchain
