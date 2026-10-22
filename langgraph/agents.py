@@ -9,8 +9,8 @@ client = genai.Client()
 chunk_collection = rag.database_init()
 
 llm = init_chat_model(
-    "gemini-3.1-flash-lite",
-    model_provider="google_genai",
+    config.llm["model"],
+    model_provider=config.llm["model_provider"],
 )
 
 class Agent():
@@ -19,7 +19,7 @@ class Agent():
         print(f"----AGENT {state.choosed_agent} sees following ReAct history as a context: {PromptVariables.current_ReAct_history}.")      
         prompt = state["messages"][-1]
 
-        agent_llm - llm.with_structured_output(self.agent_response)
+        agent_llm = llm.with_structured_output(self.agent_response)
 
         response = agent_llm.invoke([
             {
@@ -63,17 +63,25 @@ def router(state: config.State):
     ])
 
     print(f"----ROUTER picked {decision.choosed_agent} to respond because {decision.justification}.")
-    return {"choosed_agent": decision.choosed_agent}
+    return {"next_node": decision.choosed_agent}
 
 class InterviewAgent(Agent):
     def __init__(self):
         self.agent_response = config.InterviewResponse()
         self.agent_instruction = config.llm["interview_agent_instruction"]
         self.agent_extraction = config.InterviewExtraction()
+        self.agent_tools = config.interview_agent_tools
+        self.agent_model = llm.bind_tools(self.agent_tool)
 
     def interview_agent(state: config.State):
         interview_response = response(state=state)
-        return interview_response
+        if interview_response["tool"] != None:
+            return {"next_node": "interview_tools", "previous_thought": interview_response.content}
+        else:
+            return {"next_node": "_end_", "message": interview_response.content}
+
+    def interview_tools(state: config.State):
+
 
     def extract_state(self, state: config.State):
         prompt = state["messages"][-1]
@@ -95,10 +103,16 @@ class PlannerAgent(Agent):
         self.agent_response = config.PlannerResponse()
         self.agent_instruction = config.llm["planner_agent_instruction"]
         self.agent_extraction = config.PlannerExtraction()
+        self.tool_node = "planner_tool"
+        self.agent_tools = config.interview_agent_tools
+        self.agent_model = llm.bind_tools(self.agent_tool)
 
     def planner_agent(state: config.State):
         planner_response = response(state=state)
-        return planner_response
+        if planner_response["tool"] != None:
+            return {"next_node": "planner_tools", previous_thought": planner_response.content"}
+        else:
+            return {"next_node": "_end_", "message": planner_response.content}
 
     def extract_state(self, state: config.State, generated_answer: str,):
         prompt = state["messages"][-1]
@@ -120,10 +134,16 @@ class TrackingAgent(Agent):
         self.agent_response = config.TrackingResponse()
         self.agent_instruction = config.llm["tracking_agent_instruction"]
         self.agent_extraction = config.TrackingExtraction()
+        self.tools_node = "tracking_tools"
+        self.agent_tools = config.interview_agent_tools
+        self.agent_model = llm.bind_tools(self.agent_tool)
 
     def tracking_agent(state: config.State):
         tracking_response = response(state=state)
-        return tracking_response
+        if tracking_response["tool"] != None:
+            return {"next_node": "tracking_tools", "previous_thought": tracking_response.content}
+        else:
+            return {"next_node": "_end_", "message": tracking_response.content}
 
     def extract_state(self, state: config.State, generated_answer: str):
         prompt = state["messages"][-1]

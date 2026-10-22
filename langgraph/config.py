@@ -3,8 +3,8 @@ from typing import Optional, Literal
 from typing_extensions import TypedDict
 
 llm = init_chat_model(
-    "gemini-3.1-flash-lite",
-    model_provider="google_genai",
+    config.llm["model"],
+    model_provider=config.llm["model_provider"],
 )
 
 agents_characteristic = {
@@ -62,12 +62,26 @@ class TrackingExtraction(BaseModel):
     task_id: list[int]
     status: list[Literal["done", "in_progress", "not_started"]]
 
+class InterviewState(BaseModel):
+    goal: str = ""
+    region: str = ""
+    deadline: str = ""
+    technologies: str = ""
+    requirements: str = ""
+    working_style: str = ""
+    
+class PlannerState(BaseModel):
+    general_plan: list[GeneralPlan] = []
+    specific_plan: list[SpecificTask] = []
+
+class TrackingState(BaseModel):
+    commits_msg_sha: list[CommitsMsgSha] = []
+
 class TrackingShaExtraction(BaseModel):
     base_sha: Optional[str] = None
     head_sha: Optional[str] = None
 
-# Langgraph classes
-
+# Langgraph classes - responses
 class RouterResponse(BaseModel):
     choosed_agent: Literal["interview_agent", "planner_agent", "tracking_agent"] = Field(
         ...,
@@ -101,6 +115,7 @@ class TrackingResponse(AgentResponse, BaseModel):
         description=f"{[tools_info[tool] for tool in tracking_agent_tools]}"
     )
 
+# Langgraph classes - extraction
 class InterviewExtraction(BaseModel):
     goal: str = Field(..., description="What the user wants to build")
     region: str = Field(..., description="Region where project would be deplyed in")
@@ -140,6 +155,15 @@ class TrackingShaExtraction(BaseModel):
     base_sha: Optional[str] = Field(..., description="SHA of base commit to compare")
     head_sha: Optional[str] = Field(..., description="SHA of head commit to compare")
 
+class TaskStatusUpdate(BaseModel):
+    phase_id: int = Field(..., description="phase_id of the phase the task belongs to")
+    task_id: int = Field(..., description="task_id of the task inside that phase")
+    status: Literal["in_progress", "done"] = Field(..., description="New status, only if the evidence clearly shows it")
+
+class TaskStatusUpdates(BaseModel):
+    updates: list[TaskStatusUpdate] = Field([], description="Only tasks you are sure about. Empty list if none.")
+
+# State
 class State(TypedDict):
     messages: Annotated[list, add_messages]
     previous_thought: Annotated[list, add_messages]
@@ -147,7 +171,7 @@ class State(TypedDict):
     current_date: str
     conv_summary: str
     message_type: str
-    choosed_agent: str
+    next_node: str
     interview_state: InterviewState()
     planner_state: PlannerState()
     tracking_state: TrackingState()
@@ -198,6 +222,7 @@ additional_tracking_agent_info = f"If you've requested diff or commit messeges i
 
 llm = {
     "model": "gemini-3.1-flash-lite",
+    "model_provider": "google_genai",
     "max_output_tokens": 2048,
     "router_instruction": f"{router_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {router_info['agent_duties']}. {additional_orchestrator_info}.",
     "interview_agent_instruction": f"{interview_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {interview_agent_info['agent_duties']}. {agent_info['ReAct_workflow']} You can use following tools: {interview_agent_info['tools']}. {additional_interview_agent_into}",
