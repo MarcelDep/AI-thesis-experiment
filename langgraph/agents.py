@@ -1,8 +1,9 @@
 import  rag
 import  config
 import  logger
-from    abc                                import ABC, abstractmethod
-from    google                             import genai
+from    abc              import ABC, abstractmethod
+from    google           import genai
+from    langchain.agents import create_agent
 
 client = genai.Client()
 
@@ -14,31 +15,8 @@ llm = init_chat_model(
 )
 
 class Agent():
-    def response(state: config.State) -> str:
-        print(f"----AGENT {state.choosed_agent} sees following state before response: {state.state}.")
-        print(f"----AGENT {state.choosed_agent} sees following ReAct history as a context: {PromptVariables.current_ReAct_history}.")      
-        prompt = state["messages"][-1]
-
-        agent_llm = llm.with_structured_output(self.agent_response)
-
-        response = agent_llm.invoke([
-            {
-                "role": "system",
-                "content": self.agent_instruction
-            },
-            {"role": "user", "content": f"CONVERSATION SUMMARY: {state["conv_summary"]}. MESSAGES: {state["messages"]}, PREVIOUS THOUGHTs: {state["previous_thought"]}. RAG CONTEXT: {state["rag"]}. INTERVIEW AGENT STATE: {state["interview_state"]}. PLANNER AGENT STATE: {state["planner_state"]}. TRACKING AGENT STATE: {state["tracking_state"]}. CURRENT DATE: {state["current_date"]}. USER PROMPT: {state["messages"][-1]}"}
-        ])
-        print(f"----AGENT {state.choosed_agent} response: ", response.content)
-        # print(f"----AGENT response process used {interaction.usage.total_output_tokens} tokens.")
-        if response.update_state == True:
-            match state.choosed_agent:
-                case "interview_agent":
-                    self.extract_state()
-                case "planner_agent":
-                    self.extract_state(generated_answer=response.content)
-                case "tracking_agent":
-                    self.extract_state(generated_answer=response.content)
-        return response.content
+    def response(self, agent, state):
+        return self.agent.invoke(state)
 
     @abstractmethod
     def extract_state(self):
@@ -71,17 +49,12 @@ class InterviewAgent(Agent):
         self.agent_instruction = config.llm["interview_agent_instruction"]
         self.agent_extraction = config.InterviewExtraction()
         self.agent_tools = config.interview_agent_tools
-        self.agent_model = llm.bind_tools(self.agent_tool)
-
-    def interview_agent(state: config.State):
-        interview_response = response(state=state)
-        if interview_response["tool"] != None:
-            return {"next_node": "interview_tools", "previous_thought": interview_response.content}
-        else:
-            return {"next_node": "_end_", "message": interview_response.content}
-
-    def interview_tools(state: config.State):
-
+        self.agent_model = config.llm["model"]
+        self.agent = create_agent(
+            model=self.agent_model, 
+            tools=self.agent_tools,
+            system_prompt=self.agent_instruction,
+            response_format=self.agent_response)
 
     def extract_state(self, state: config.State):
         prompt = state["messages"][-1]
@@ -103,16 +76,13 @@ class PlannerAgent(Agent):
         self.agent_response = config.PlannerResponse()
         self.agent_instruction = config.llm["planner_agent_instruction"]
         self.agent_extraction = config.PlannerExtraction()
-        self.tool_node = "planner_tool"
         self.agent_tools = config.interview_agent_tools
-        self.agent_model = llm.bind_tools(self.agent_tool)
-
-    def planner_agent(state: config.State):
-        planner_response = response(state=state)
-        if planner_response["tool"] != None:
-            return {"next_node": "planner_tools", previous_thought": planner_response.content"}
-        else:
-            return {"next_node": "_end_", "message": planner_response.content}
+        self.agent_model = config.llm["model"]
+        self.agent = create_agent(
+            model=self.agent_model, 
+            tools=self.agent_tools,
+            system_prompt=self.agent_instruction,
+            response_format=self.agent_response)
 
     def extract_state(self, state: config.State, generated_answer: str,):
         prompt = state["messages"][-1]
@@ -134,16 +104,13 @@ class TrackingAgent(Agent):
         self.agent_response = config.TrackingResponse()
         self.agent_instruction = config.llm["tracking_agent_instruction"]
         self.agent_extraction = config.TrackingExtraction()
-        self.tools_node = "tracking_tools"
-        self.agent_tools = config.interview_agent_tools
-        self.agent_model = llm.bind_tools(self.agent_tool)
-
-    def tracking_agent(state: config.State):
-        tracking_response = response(state=state)
-        if tracking_response["tool"] != None:
-            return {"next_node": "tracking_tools", "previous_thought": tracking_response.content}
-        else:
-            return {"next_node": "_end_", "message": tracking_response.content}
+        self.agent_tools = config.tracking_agent_tools
+        self.agent_model = config.llm["model"]
+        self.agent = create_agent(
+            model=self.agent_model, 
+            tools=self.agent_tools,
+            system_prompt=self.agent_instruction,
+            response_format=self.agent_response)
 
     def extract_state(self, state: config.State, generated_answer: str):
         prompt = state["messages"][-1]

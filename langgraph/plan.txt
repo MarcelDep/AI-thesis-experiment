@@ -103,3 +103,8 @@ w analizie sprawdzisz ile popełniają błędów np. zapominają o wcześniejszy
 który zużyje najmniej tokenów i da najlepsze odpowiedzi
 
 Może dodaj state agentów jako karty do widoku użytkownika w streamlit? dzieki temu użytkownik będzie mógł łatwo zauważyć jak myśli model i ew. coś poprawić odrazu w state agenta
+
+Jutro muszę ustalić jaki agent będzie co kiedy aktualizował. Tak samo jak i tu. W sensie muszę sobie dokładnie rozpisać po kolei, co się dzieje, z jakim statem i jakie decyzje kiedy
+są podejmowane. Na przykład, że interview agent może chcieć użyć jakiegoś toola Na przykład do uzyskania lokalizacji użytkownika No to lokalizacja tego użytkownika powinna Zostać 
+tutana jako thinking process i potem jeżeli ponownie to zapytanie wróci do modelu, on patrzy na thinking process i decyduje się, że doszła nowa informacja, więc ustawi parametr 
+update state na true i całość pójdzie do ekstrakcji
