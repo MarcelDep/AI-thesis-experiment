@@ -1,12 +1,11 @@
-import  agents
-import  config
-import  geocoder
-import  requests
-from    google               import genai
-from    langchain_core.tools import tool
-from    langgraph.types      import Command
+import schemas
+import geocoder
+import requests
+from   langchain_core.tools import tool
+from   langgraph.types      import Command
+from   langchain.tools      import ToolRuntime
 
-client = genai.Client()
+llm = config.llm
 
 @tool
 def user_location():
@@ -21,13 +20,6 @@ def user_location():
     location = geocoder.ip('me')
     print(location)
     return Command(update={"previous_thought": f"user_location tool response: {location}"})
-
-# Rozważ czy nie warto usunąć - ale jak nie to dodaj tu powrót do router
-'''@tool
-def switch_agent(state: config.State):
-    PromptVariables.prompt = "Current agent decided that different agent should responde right now. Review conversation and make a decision which agent should respond."
-    orchestrator_decision = agents.orchiestrator(SessionVariables=SessionVariables, PromptVariables=PromptVariables)
-    return orchestrator_decision'''
 
 @tool
 def get_commit_messages(runtime: ToolRuntime):
@@ -71,14 +63,14 @@ def get_commit_diff(runtime: ToolRuntime) -> str:
     state = runtime.state
     prompt = state["messages"][-1]
 
-    extract_llm = llm.with_structured_output(config.TrackingShaExtraction)
+    extract_llm = llm.with_structured_output(schemas.TrackingShaExtraction)
 
     shas = extract_llm.invoke([
         {
             "role": "system",
             "content": f"You're extraction agent. Other agent decided that it needs to get diff of two github commits. Based on conversation history, user prompt and list of commit messages pick base_sha and head_sha values. Both base_sha and head_sha are sha's of commits from list. Base sha is base commit and changes in head sha will be compared to base sha commit."
         },
-        {"role": "user", "content": f"CONVERSATION HISTORY: {state["messages"]}, AGENT THINKING HISTORY FROM NEWEST USER PROMPT: {state["previous_thought"]}, USER_PROMPT: {prompt}, LIST OF COMMITS AND THEIR SHAs {state["tracking_state"]}"}
+        {"role": "user", "content": f'CONVERSATION HISTORY: {state["messages"]}, AGENT THINKING HISTORY FROM NEWEST USER PROMPT: {state["previous_thought"]}, USER_PROMPT: {prompt}, LIST OF COMMITS AND THEIR SHAs {state["tracking_state"]}'}
     ])
 
     headers = {"Authorization": f"Bearer {state.github_variables.token}", "Accept": "application/vnd.github.diff",}
@@ -132,7 +124,7 @@ def modify_tasks_status(runtime: ToolRuntime) -> dict:
         f"{c.commit_sha} | {c.commit_message}" for c in tracking_state.commits_msg_sha
     )
 
-    updater = llm.with_structured_output(config.TaskStatusUpdates)
+    updater = llm.with_structured_output(schemas.TaskStatusUpdates)
     result = updater.invoke([
         {"role": "system", "content": ('''
             You update task statuses. Each task line is: phase_id | task_id | name | current status.

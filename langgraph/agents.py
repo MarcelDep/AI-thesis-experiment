@@ -1,18 +1,13 @@
-import  rag
-import  config
-import  logger
-from    abc              import ABC, abstractmethod
-from    google           import genai
-from    langchain.agents import create_agent
+import tools
+import config
+import schemas
+from   langchain.agents import create_agent
 
-client = genai.Client()
+interview_agent_tools = [tools.user_location,]
+planner_agent_tools = [tools.user_location,]
+tracking_agent_tools = [tools.get_commit_messages, tools.get_commit_diff, tools.modify_tasks_status]
 
-chunk_collection = rag.database_init()
-
-llm = init_chat_model(
-    config.llm["model"],
-    model_provider=config.llm["model_provider"],
-)
+llm = config.llm
 
 class Agent():
     def response(self, agent, state):
@@ -21,14 +16,12 @@ class Agent():
 
         return {
             "messages": structured_output["content"],
-            ""
             }
 
-    @abstractmethod
     def extract_state(self):
         ...
 
-def router(state: config.State):
+def router(state: schemas.State):
     prompt = state["messages"][-1]
     conv_history = state["messages"]
     previous_thought = state["previous_thought"]
@@ -36,12 +29,12 @@ def router(state: config.State):
     planner_state = state["planner_state"]
     tracking_state = state["tracking_state"]
 
-    router_llm = llm.with_structured_output(config.RouterResponse)
+    router_llm = llm.with_structured_output(schemas.RouterResponse)
 
     decision = router_llm.invoke([
         {
             "role": "system",
-            "content": config.llm.router_instruction
+            "content": config.LLM_CONFIG.router_instruction
         },
         {"role": "user", "content": f"USER PROMPT: {prompt}. CONVERSATION HISTORY: {conv_history}. PREVIOUS THOUGHTs: {previous_thought}. INTERVIEW AGENT STATE: {interview_state}. PLANNER AGENT STATE: {planner_state}. TRACKING AGENT STATE: {tracking_state}"}
     ])
@@ -51,18 +44,17 @@ def router(state: config.State):
 
 class InterviewAgent(Agent):
     def __init__(self):
-        self.agent_response = config.InterviewResponse()
-        self.agent_instruction = config.llm["interview_agent_instruction"]
-        self.agent_extraction = config.InterviewExtraction()
-        self.agent_tools = config.interview_agent_tools
-        self.agent_model = config.llm["model"]
+        self.agent_instruction = config.LLM_CONFIG["interview_agent_instruction"]
+        self.agent_extraction = schemas.InterviewExtraction()
+        self.agent_tools = interview_agent_tools
+        self.agent_model = config.LLM_CONFIG["model"]
         self.agent = create_agent(
             model=self.agent_model, 
             tools=self.agent_tools,
             system_prompt=self.agent_instruction,
-            response_format=self.agent_response.__class__)
+            response_format=schemas.AgentResponse)
 
-    def extract_state(self, state: config.State):
+    def extract_state(self, state: schemas.State):
         prompt = state["messages"][-1]
         extract_llm = llm.with_structured_output(self.agent_extraction)
 
@@ -79,18 +71,17 @@ class InterviewAgent(Agent):
 
 class PlannerAgent(Agent):
     def __init__(self):
-        self.agent_response = config.PlannerResponse()
-        self.agent_instruction = config.llm["planner_agent_instruction"]
-        self.agent_extraction = config.PlannerExtraction()
-        self.agent_tools = config.interview_agent_tools
-        self.agent_model = config.llm["model"]
+        self.agent_instruction = config.LLM_CONFIG["planner_agent_instruction"]
+        self.agent_extraction = schemas.PlannerExtraction()
+        self.agent_tools = planner_agent_tools
+        self.agent_model = config.LLM_CONFIG["model"]
         self.agent = create_agent(
             model=self.agent_model, 
             tools=self.agent_tools,
             system_prompt=self.agent_instruction,
-            response_format=self.agent_response.__class__)
+            response_format=schemas.AgentResponse)
 
-    def extract_state(self, state: config.State, generated_answer: str,):
+    def extract_state(self, state: schemas.State, generated_answer: str,):
         prompt = state["messages"][-1]
         extract_llm = llm.with_structured_output(self.agent_extraction)
 
@@ -107,18 +98,17 @@ class PlannerAgent(Agent):
 
 class TrackingAgent(Agent):
     def __init__(self):
-        self.agent_response = config.TrackingResponse()
-        self.agent_instruction = config.llm["tracking_agent_instruction"]
-        self.agent_extraction = config.TrackingExtraction()
-        self.agent_tools = config.tracking_agent_tools
-        self.agent_model = config.llm["model"]
+        self.agent_instruction = config.LLM_CONFIG["tracking_agent_instruction"]
+        self.agent_extraction = schemas.TrackingExtraction()
+        self.agent_tools = tracking_agent_tools
+        self.agent_model = config.LLM_CONFIG["model"]
         self.agent = create_agent(
             model=self.agent_model, 
             tools=self.agent_tools,
             system_prompt=self.agent_instruction,
-            response_format=self.agent_response.__class__)
+            response_format=schemas.AgentResponse)
 
-    def extract_state(self, state: config.State, generated_answer: str):
+    def extract_state(self, state: schemas.State, generated_answer: str):
         prompt = state["messages"][-1]
         extract_llm = llm.with_structured_output(self.agent_extraction)
 
