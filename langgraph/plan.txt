@@ -108,3 +108,6 @@ Jutro muszę ustalić jaki agent będzie co kiedy aktualizował. Tak samo jak i 
 są podejmowane. Na przykład, że interview agent może chcieć użyć jakiegoś toola Na przykład do uzyskania lokalizacji użytkownika No to lokalizacja tego użytkownika powinna Zostać 
 tutana jako thinking process i potem jeżeli ponownie to zapytanie wróci do modelu, on patrzy na thinking process i decyduje się, że doszła nowa informacja, więc ustawi parametr 
 update state na true i całość pójdzie do ekstrakcji
+
+!! mozliwosc podlądu pełnych plików github przez agenta po pozwoleniu uzytkownika + funkcja odmowy dostępu do commit wybranych/wszystkich msg i do diffów między wybranymi commitami
+!! podsumowanie po 30 wiadomościach

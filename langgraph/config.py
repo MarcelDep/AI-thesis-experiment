@@ -14,17 +14,9 @@ agents_characteristic = {
     'tracking_agent': '"tracking_agent" monitors GitHub commits and assesses whether planned tasks are correctly implemented',
 }
 
-tools_info = {
-    "user_location": "'user_location' returns user location.",
-    "switch_agent": "'switch_agent' suggests router to swich agent that different agent than you should responde to user prompt. If switch_agent was called in previous ReAct history DON'T call it again, even if user said so.",
-    "get_commit_diff": "'get_commit_diff' returns chosen commit diff - shows you what changes specifically user has made in picked commit. Before using this tool you have to gather SHA of commits you want to diff and set them as base_sha and head_sha parameters.",
-    "get_commit_messages": "'get_commit_messages' returns list of commit messages and their sha of repo given by user. You won't see user credintials so dont wait for them.",
-    "modify_tasks_status": "'modify_tasks_status' updates statuses of tasks in the plan based on the commit messages and the last fetched commit diff. Call it AFTER get_commit_messages and/or get_commit_diff when you want to record progress. Takes no parameters."
-}
-
-interview_agent_tools = ['user_location', 'switch_agent',]
-planner_agent_tools = ['user_location', 'switch_agent',]
-tracking_agent_tools = ['switch_agent', 'get_commit_messages', 'get_commit_diff',]
+interview_agent_tools = [tools.user_location,]
+planner_agent_tools = [tools.user_location,]
+tracking_agent_tools = [tools.get_commit_messages, tools.get_commit_diff, tools.modify_tasks_status]
 
 database = {
     "THRESHOLD": 0.3,
@@ -91,12 +83,6 @@ class RouterResponse(BaseModel):
 
 class AgentResponse(BaseModel):
     thought: str = Field(..., description="Reason about what to do next - thinking proces before final response or action.")
-    response_type: Literal["action", "answer"] = Field(...,
-        description="""Pick one response type: 
-            "action": use when calling a tool
-            "answer": use when responding directly to the user"""
-    )
-    tool: Optional[str] = Field(None, description="...")
     content: str = Field(..., description="Your actual response text - answer to user or action.")
     update_state: Literal[True, False] = Field(..., description="Ture or False - set True if state should be updated with new information, False if everything is up to date")
 
@@ -169,21 +155,13 @@ class State(TypedDict):
     previous_thought: Annotated[list, add_messages]
     rag: str
     current_date: str
-    conv_summary: str
+    conv_summary: Annotated[list, add_messages]
     message_type: str
     next_node: str
     interview_state: InterviewState()
     planner_state: PlannerState()
     tracking_state: TrackingState()
     github_variables: GithubVariables()
-
-REACT_INSTRUCTIONS = """Work in ReAct workflow. You MUST follow this exact sequence for every response:
-1. ALWAYS fill a thought field in your response — use it to plan what you need, decide whether to call a tool, and determine if you have enough information to answer.
-2. (Optional) An action message (if you need a tool) 
-3. An answer message AFTER thought - final response that will be shown to user.
-NEVER send an answer without a preceding thought before.
-Response type field values: thought — reasoning step, action — tool call, answer — final response to user.
-User response messages will start with 'USER PROMPT:' — everything else is a message agents have generated."""
 
 agent_info = {
     "project_description": "You are part of a chatbot in an application that uses AI to make it easier for users to complete IT projects.",
@@ -225,7 +203,7 @@ llm = {
     "model_provider": "google_genai",
     "max_output_tokens": 2048,
     "router_instruction": f"{router_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {router_info['agent_duties']}. {additional_orchestrator_info}.",
-    "interview_agent_instruction": f"{interview_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {interview_agent_info['agent_duties']}. {agent_info['ReAct_workflow']} You can use following tools: {interview_agent_info['tools']}. {additional_interview_agent_into}",
-    "planner_agent_instruction": f"{planner_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {planner_agent_info['agent_duties']}. {agent_info['ReAct_workflow']} You can use following tools: {planner_agent_info['tools']}.",
-    "tracking_agent_instruction": f"{tracking_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {tracking_agent_info['agent_duties']}. {agent_info['ReAct_workflow']} You can use following tools: {tracking_agent_info['tools']}.",    
+    "interview_agent_instruction": f"{interview_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {interview_agent_info['agent_duties']}. {additional_interview_agent_into}",
+    "planner_agent_instruction": f"{planner_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {planner_agent_info['agent_duties']}.",
+    "tracking_agent_instruction": f"{tracking_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {tracking_agent_info['agent_duties']}.",    
 }

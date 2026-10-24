@@ -16,7 +16,13 @@ llm = init_chat_model(
 
 class Agent():
     def response(self, agent, state):
-        return self.agent.invoke(state)
+        result = self.agent.invoke(state)
+        structured_output = result.get("structured_response")
+
+        return {
+            "messages": structured_output["content"],
+            ""
+            }
 
     @abstractmethod
     def extract_state(self):
@@ -54,7 +60,7 @@ class InterviewAgent(Agent):
             model=self.agent_model, 
             tools=self.agent_tools,
             system_prompt=self.agent_instruction,
-            response_format=self.agent_response)
+            response_format=self.agent_response.__class__)
 
     def extract_state(self, state: config.State):
         prompt = state["messages"][-1]
@@ -82,7 +88,7 @@ class PlannerAgent(Agent):
             model=self.agent_model, 
             tools=self.agent_tools,
             system_prompt=self.agent_instruction,
-            response_format=self.agent_response)
+            response_format=self.agent_response.__class__)
 
     def extract_state(self, state: config.State, generated_answer: str,):
         prompt = state["messages"][-1]
@@ -110,7 +116,7 @@ class TrackingAgent(Agent):
             model=self.agent_model, 
             tools=self.agent_tools,
             system_prompt=self.agent_instruction,
-            response_format=self.agent_response)
+            response_format=self.agent_response.__class__)
 
     def extract_state(self, state: config.State, generated_answer: str):
         prompt = state["messages"][-1]
@@ -127,13 +133,13 @@ class TrackingAgent(Agent):
         print(f"----EXTRACTION of {state.choosed_agent} state: {response.content}")
         return {"tracking_state": response.content}
 
-def summarize(summary: str, answer_history: list,) -> str:
-    interaction = client.interactions.create(
-        model = config.llm["model"],
-        system_instruction = f"You are an summarization agent. Your task is to summarize conversation based on its history. Your summary should be rather short. If CURRENT SUMMARY isn't empty then continue this summary instead generating new one. Just generate a contuniuation of it. If summary is empty then make one.",
-        input = f'CONVERSATION HISTORY: {answer_history},  CURRENT SUMMARY: {summary}',
-        generation_config={
-            "max_output_tokens": config.llm["max_output_tokens"],
+def summarize(state: config.State) -> str:
+    extract_llm = llm.with_structured_output(self.agent_extraction)
+    response = extract_llm.invoke([
+        {
+            "role": "system",
+            "content": f"You are an summarization agent. Your task is to summarize conversation based on its history. Your summary should be rather short. If CURRENT SUMMARY isn't empty then continue this summary instead generating new one. Just generate a contuniuation of it. If summary is empty then make one."
         },
-    )
-    return interaction.output_text
+        {"role": "user", "content": f"CONVERSATION HISTORY: {state["messages"]},  CURRENT SUMMARY: {state["conv_summary"]}"}
+    ])
+    return {"conv_summary": response.content}

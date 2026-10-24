@@ -2,8 +2,9 @@ import  agents
 import  config
 import  geocoder
 import  requests
-from    google   import genai
+from    google               import genai
 from    langchain_core.tools import tool
+from    langgraph.types      import Command
 
 client = genai.Client()
 
@@ -15,11 +16,11 @@ def user_location():
     has not stated it. Do not use it if the location is already known from the
     conversation. Takes no arguments.
 
-    Returns: latitude/longitude and city of the user.
+    Returns: city of the user.
     """
     location = geocoder.ip('me')
     print(location)
-    return {"previous_thought": f"user_location tool response: {location}"}
+    return Command(update={"previous_thought": f"user_location tool response: {location}"})
 
 # Rozważ czy nie warto usunąć - ale jak nie to dodaj tu powrót do router
 '''@tool
@@ -55,7 +56,7 @@ def get_commit_messages(runtime: ToolRuntime):
         response = response.json()
         commits_with_sha = [[commit["commit"]["message"],commit["sha"]] for commit in response]
         print(f"COMMIT MESSAGES: {commits_with_sha}")
-    return {"previous_thought": f"get_commit_messages tool response: {commits_with_sha}"}
+    return Command(update={"tracking_state": f"get_commit_messages tool response: {commits_with_sha}", "previous_thought": f"get_commit_messages tool response: {commits_with_sha}"})
 
 @tool
 def get_commit_diff(runtime: ToolRuntime) -> str:
@@ -98,7 +99,7 @@ def get_commit_diff(runtime: ToolRuntime) -> str:
         print(f"----BASE and head shas: {shas.content}")
         print(response.text)
         diff = response.text[:20000]
-    return {"previous_thought": f"get_commit_messages tool response: {diff}"}
+    return Command(update={"previous_thought": f"get_commit_messages tool response: {diff}"})
 
 @tool
 def modify_tasks_status(runtime: ToolRuntime) -> dict:
