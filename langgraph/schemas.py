@@ -27,7 +27,6 @@ class CommitsMsgSha(BaseModel):
 
 class GithubVariables(BaseModel):
     repo: str = ""
-    token: str = ""
     owner: str = ""
 
 # Extraction
@@ -48,6 +47,7 @@ class PlannerState(BaseModel):
     specific_plan: list[SpecificTask] = []
 
 class TrackingState(BaseModel):
+    last_diff: str = ""
     commits_msg_sha: list[CommitsMsgSha] = []
 
 class TrackingShaExtraction(BaseModel):
@@ -98,11 +98,11 @@ class PlannerExtraction(BaseModel):
                 "task_id" - uniqe id of task for every phase
                 "task_name" - name of the task
                 "deadline" - when this task should ended
-                "status" - status of the task          
+                "status" - status of the task (not_started by deafult)          
     """)
 
 class TrackingExtraction(BaseModel):
-    commits_msg_sha: list[CommitsMsgSha] = Field(..., description="List of ibjects, each with: commit_message - commit message, and commit_sha - their SHAs")
+    commits_msg_sha: list[CommitsMsgSha] = Field(..., description="List of objects, each with: commit_message - commit message, and commit_sha - their SHAs")
 
 class TaskStateUpdate(BaseModel):
     task_id: list[int] = Field(..., description="List of id of tasks where status should be changed")
@@ -123,13 +123,11 @@ class TaskStatusUpdates(BaseModel):
 # State
 class State(TypedDict):
     messages: Annotated[list, add_messages]
-    previous_thought: Annotated[list, add_messages]
     rag: str
     current_date: str
     conv_summary: Annotated[list, add_messages]
-    message_type: str
-    next_node: str
-    interview_state: InterviewState()
-    planner_state: PlannerState()
-    tracking_state: TrackingState()
-    github_variables: GithubVariables()
+    choosed_agent: str
+    interview_state: InterviewState
+    planner_state: PlannerState
+    tracking_state: TrackingState
+    github_variables: GithubVariables

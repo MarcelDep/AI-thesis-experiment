@@ -40,7 +40,7 @@ def router(state: schemas.State):
     ])
 
     print(f"----ROUTER picked {decision.choosed_agent} to respond because {decision.justification}.")
-    return {"next_node": decision.choosed_agent}
+    return {"choosed_agent": decision.choosed_agent}
 
 class InterviewAgent(Agent):
     def __init__(self):
@@ -121,11 +121,10 @@ class TrackingAgent(Agent):
         ])
 
         print(f"----EXTRACTION of {state.choosed_agent} state: {response.content}")
-        return {"tracking_state": response.content}
+        return {"tracking_state"["last_diff"]: response.content}
 
 def summarize(state: config.State) -> str:
-    extract_llm = llm.with_structured_output(self.agent_extraction)
-    response = extract_llm.invoke([
+    response = llm.invoke([
         {
             "role": "system",
             "content": f"You are an summarization agent. Your task is to summarize conversation based on its history. Your summary should be rather short. If CURRENT SUMMARY isn't empty then continue this summary instead generating new one. Just generate a contuniuation of it. If summary is empty then make one."

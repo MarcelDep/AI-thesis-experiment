@@ -1,3 +1,4 @@
+import config
 import schemas
 import geocoder
 import requests
@@ -91,7 +92,7 @@ def get_commit_diff(runtime: ToolRuntime) -> str:
         print(f"----BASE and head shas: {shas.content}")
         print(response.text)
         diff = response.text[:20000]
-    return Command(update={"previous_thought": f"get_commit_messages tool response: {diff}"})
+    return Command(update={"last_diff": f"{diff}"})
 
 @tool
 def modify_tasks_status(runtime: ToolRuntime) -> dict:

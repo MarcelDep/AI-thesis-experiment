@@ -1,10 +1,5 @@
 from langchain.chat_models import init_chat_model
 
-llm = init_chat_model(
-    config.LLM_CONFIG["model"],
-    model_provider=config.LLM_CONFIG["model_provider"],
-)
-
 agents_characteristic = {
     'router': '"router" analyses user needs and routes to the appropriate agent',
     'interview_agent': '"interview_agent" Interviews user to define project goals, technologies, working style and requirements',
@@ -42,7 +37,7 @@ router_info = {
     "agent_duties": "Your task is to decide which agent should responde to user prompt",
 }
 
-additional_orchestrator_info = f"Only switch to other agents from interview_agent when ALL of the fields in interview_state are non-empty strings: goal, technologies, deadline, working_style, requirements. If any of these fields are empty string "", keep using interview_agent regardless of what the conversation suggests. Do not infer that information is gathered from conversation text alone — check the actual state fields."
+additional_orchestrator_info = f'Only switch to other agents from interview_agent when ALL of the fields in interview_state are non-empty strings: goal, technologies, deadline, working_style, requirements. If any of these fields are empty string "", keep using interview_agent regardless of what the conversation suggests. Do not infer that information is gathered from conversation text alone — check the actual state fields.'
 additional_interview_agent_into = f"When whole infomration in InerviewAgent state is filled, call switch_agent tool. Else, keep askign for missing info untill state is full."
 additional_tracking_agent_info = f"If you've requested diff or commit messeges in previous messages in current ReAct history, then don't request it again."
 
@@ -55,3 +50,8 @@ LLM_CONFIG = {
     "planner_agent_instruction": f"{planner_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {planner_agent_info['agent_duties']}.",
     "tracking_agent_instruction": f"{tracking_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {tracking_agent_info['agent_duties']}.",    
 }
+
+llm = init_chat_model(
+    LLM_CONFIG["model"],
+    model_provider=LLM_CONFIG["model_provider"],
+)
