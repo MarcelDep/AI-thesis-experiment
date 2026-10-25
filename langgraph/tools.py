@@ -10,17 +10,12 @@ llm = config.llm
 
 @tool
 def user_location():
-    """Get the approximate location of the user (based on IP address).
-
-    Use this tool ONLY when the user's region or country is needed and the user
-    has not stated it. Do not use it if the location is already known from the
-    conversation. Takes no arguments.
-
-    Returns: city of the user.
-    """
+    """Get the approximate location of the user."""
+    
     location = geocoder.ip('me')
     print(location)
-    return Command(update={"previous_thought": f"user_location tool response: {location}"})
+    print("[DEBUG] user_location CALLED")
+    return f"DONT CALL user_location tool output: the user is in city: , country: ."
 
 @tool
 def get_commit_messages(runtime: ToolRuntime):
@@ -36,7 +31,7 @@ def get_commit_messages(runtime: ToolRuntime):
     (e.g. missing or invalid credentials).
     """
     state = runtime.state
-    headers = {"Authorization": f"Bearer {state.github_variables.token}", "Accept": "application/vnd.github+json",}
+    headers = {"Authorization": f"Bearer {os.getenv('GITHUB_PAT')}", "Accept": "application/vnd.github+json",}
     response = requests.get(f'https://api.github.com/repos/{state.github_variables.owner}/{state.github_variables.repo}/commits', headers=headers)
     if response.status_code != 200:
         if response["message"] == "Bad credentials":
@@ -49,7 +44,7 @@ def get_commit_messages(runtime: ToolRuntime):
         response = response.json()
         commits_with_sha = [[commit["commit"]["message"],commit["sha"]] for commit in response]
         print(f"COMMIT MESSAGES: {commits_with_sha}")
-    return Command(update={"tracking_state": f"get_commit_messages tool response: {commits_with_sha}", "previous_thought": f"get_commit_messages tool response: {commits_with_sha}"})
+    return Command(update={"tracking_state": f"get_commit_messages tool response: {commits_with_sha}", "messages": [ToolMessage(content=f"get_commit_messages tool response: {commits_with_sha}", tool_call_id=runtime.tool_call_id)]})
 
 @tool
 def get_commit_diff(runtime: ToolRuntime) -> str:
@@ -74,7 +69,7 @@ def get_commit_diff(runtime: ToolRuntime) -> str:
         {"role": "user", "content": f'CONVERSATION HISTORY: {state["messages"]}, AGENT THINKING HISTORY FROM NEWEST USER PROMPT: {state["previous_thought"]}, USER_PROMPT: {prompt}, LIST OF COMMITS AND THEIR SHAs {state["tracking_state"]}'}
     ])
 
-    headers = {"Authorization": f"Bearer {state.github_variables.token}", "Accept": "application/vnd.github.diff",}
+    headers = {"Authorization": f"Bearer {os.getenv('GITHUB_PAT')}", "Accept": "application/vnd.github.diff",}
     basehead = f"{shas.base_sha}...{shas.head_sha}"
     response = requests.get(f'https://api.github.com/repos/{state.github_variables.owner}/{state.github_variables.repo}/compare/{basehead}', headers=headers)
     print("STATUS:", response.status_code)
@@ -151,5 +146,5 @@ def modify_tasks_status(runtime: ToolRuntime) -> dict:
     summary = "Updated: " + "; ".join(changed) if changed else "No task statuses changed."
     return {
         "planner_state": new_plan,
-        "previous_thought": [("system", f"modify_tasks_status RESULT: {summary}")],
+        "messages": [("system", f"modify_tasks_status RESULT: {summary}")],
     }

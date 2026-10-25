@@ -2,6 +2,7 @@ import tools
 import config
 import schemas
 from   langchain.agents import create_agent
+from   langchain.agents.structured_output import ToolStrategy
 
 interview_agent_tools = [tools.user_location,]
 planner_agent_tools = [tools.user_location,]
@@ -10,12 +11,36 @@ tracking_agent_tools = [tools.get_commit_messages, tools.get_commit_diff, tools.
 llm = config.llm
 
 class Agent():
-    def response(self, agent, state):
-        result = self.agent.invoke(state)
+    def response(self, state: schemas.State):
+        prompt = state["messages"][-1]
+        conv_history = state["messages"]
+        interview_state = state["interview_state"]
+        planner_state = state["planner_state"]
+        tracking_state = state["tracking_state"]
+        print(f'----AGENT {state["choosed_agent"]} will response')
+        agent_input = {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": (
+                        f"USER PROMPT: {prompt}\n"
+                        f"CONVERSATION HISTORY: {conv_history}\n"
+                        f"INTERVIEW AGENT STATE: {interview_state}\n"
+                        f"PLANNER AGENT STATE: {planner_state}\n"
+                        f"TRACKING AGENT STATE: {tracking_state}\n"
+                        f"CURRENT DATE: {state['current_date']}"
+                    )
+                }
+            ]
+        }        
+        print("[DEBUG] BEFORE agent.invoke")
+        result = self.agent.invoke(agent_input)
+        print("[DEBUG] AFTER agent.invoke")
         structured_output = result.get("structured_response")
 
         return {
-            "messages": structured_output["content"],
+            "messages": [structured_output.content],
+            "update_state": structured_output.update_state
             }
 
     def extract_state(self):
@@ -24,7 +49,6 @@ class Agent():
 def router(state: schemas.State):
     prompt = state["messages"][-1]
     conv_history = state["messages"]
-    previous_thought = state["previous_thought"]
     interview_state = state["interview_state"]
     planner_state = state["planner_state"]
     tracking_state = state["tracking_state"]
@@ -34,27 +58,27 @@ def router(state: schemas.State):
     decision = router_llm.invoke([
         {
             "role": "system",
-            "content": config.LLM_CONFIG.router_instruction
+            "content": config.LLM_CONFIG["router_instruction"]
         },
-        {"role": "user", "content": f"USER PROMPT: {prompt}. CONVERSATION HISTORY: {conv_history}. PREVIOUS THOUGHTs: {previous_thought}. INTERVIEW AGENT STATE: {interview_state}. PLANNER AGENT STATE: {planner_state}. TRACKING AGENT STATE: {tracking_state}"}
+        {"role": "user", "content": f"USER PROMPT: {prompt}. CONVERSATION HISTORY: {conv_history}. INTERVIEW AGENT STATE: {interview_state}. PLANNER AGENT STATE: {planner_state}. TRACKING AGENT STATE: {tracking_state}"}
     ])
 
-    print(f"----ROUTER picked {decision.choosed_agent} to respond because {decision.justification}.")
+    print(f"----ROUTER picked {decision.choosed_agent} to respond because {decision.justification}")
     return {"choosed_agent": decision.choosed_agent}
 
 class InterviewAgent(Agent):
     def __init__(self):
         self.agent_instruction = config.LLM_CONFIG["interview_agent_instruction"]
-        self.agent_extraction = schemas.InterviewExtraction()
+        self.agent_extraction = schemas.InterviewExtraction
         self.agent_tools = interview_agent_tools
-        self.agent_model = config.LLM_CONFIG["model"]
         self.agent = create_agent(
-            model=self.agent_model, 
+            model=llm, 
             tools=self.agent_tools,
             system_prompt=self.agent_instruction,
-            response_format=schemas.AgentResponse)
+            response_format=ToolStrategy(schemas.AgentResponse))
 
     def extract_state(self, state: schemas.State):
+        print(f'----AGENT {state["choosed_agent"]} response will be extracted to its state')
         prompt = state["messages"][-1]
         extract_llm = llm.with_structured_output(self.agent_extraction)
 
@@ -72,16 +96,16 @@ class InterviewAgent(Agent):
 class PlannerAgent(Agent):
     def __init__(self):
         self.agent_instruction = config.LLM_CONFIG["planner_agent_instruction"]
-        self.agent_extraction = schemas.PlannerExtraction()
+        self.agent_extraction = schemas.PlannerExtraction
         self.agent_tools = planner_agent_tools
-        self.agent_model = config.LLM_CONFIG["model"]
         self.agent = create_agent(
-            model=self.agent_model, 
+            model=llm, 
             tools=self.agent_tools,
             system_prompt=self.agent_instruction,
-            response_format=schemas.AgentResponse)
+            response_format=ToolStrategy(schemas.AgentResponse))
 
     def extract_state(self, state: schemas.State, generated_answer: str,):
+        print(f'----AGENT {state["choosed_agent"]} response will be extracted to its state')
         prompt = state["messages"][-1]
         extract_llm = llm.with_structured_output(self.agent_extraction)
 
@@ -99,16 +123,16 @@ class PlannerAgent(Agent):
 class TrackingAgent(Agent):
     def __init__(self):
         self.agent_instruction = config.LLM_CONFIG["tracking_agent_instruction"]
-        self.agent_extraction = schemas.TrackingExtraction()
+        self.agent_extraction = schemas.TrackingExtraction
         self.agent_tools = tracking_agent_tools
-        self.agent_model = config.LLM_CONFIG["model"]
         self.agent = create_agent(
-            model=self.agent_model, 
+            model=llm, 
             tools=self.agent_tools,
             system_prompt=self.agent_instruction,
-            response_format=schemas.AgentResponse)
+            response_format=ToolStrategy(schemas.AgentResponse))
 
     def extract_state(self, state: schemas.State, generated_answer: str):
+        print(f'----AGENT {state["choosed_agent"]} response will be extracted to its state')
         prompt = state["messages"][-1]
         extract_llm = llm.with_structured_output(self.agent_extraction)
 
@@ -121,9 +145,9 @@ class TrackingAgent(Agent):
         ])
 
         print(f"----EXTRACTION of {state.choosed_agent} state: {response.content}")
-        return {"tracking_state"["last_diff"]: response.content}
+        return {"tracking_state".last_diff: response.content}
 
-def summarize(state: config.State) -> str:
+def summarize(state: schemas.State) -> str:
     response = llm.invoke([
         {
             "role": "system",

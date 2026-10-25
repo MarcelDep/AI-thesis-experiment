@@ -37,16 +37,15 @@ router_info = {
     "agent_duties": "Your task is to decide which agent should responde to user prompt",
 }
 
-additional_orchestrator_info = f'Only switch to other agents from interview_agent when ALL of the fields in interview_state are non-empty strings: goal, technologies, deadline, working_style, requirements. If any of these fields are empty string "", keep using interview_agent regardless of what the conversation suggests. Do not infer that information is gathered from conversation text alone — check the actual state fields.'
-additional_interview_agent_into = f"When whole infomration in InerviewAgent state is filled, call switch_agent tool. Else, keep askign for missing info untill state is full."
-additional_tracking_agent_info = f"If you've requested diff or commit messeges in previous messages in current ReAct history, then don't request it again."
+additional_router_info = f'Only switch to other agents from interview_agent when ALL of the fields in interview_state are non-empty strings: goal, technologies, deadline, working_style, requirements. If any of these fields are empty string "", keep using interview_agent regardless of what the conversation suggests. Do not infer that information is gathered from conversation text alone — check the actual state fields.'
+additional_interview_agent_into = f"Once all required information is collected, complete your response."
 
 LLM_CONFIG = {
     "model": "gemini-3.1-flash-lite",
     "model_provider": "google_genai",
     "max_output_tokens": 2048,
-    "router_instruction": f"{router_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {router_info['agent_duties']}. {additional_orchestrator_info}.",
-    "interview_agent_instruction": f"{interview_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {interview_agent_info['agent_duties']}. {additional_interview_agent_into}",
+    "router_instruction": f"{router_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {router_info['agent_duties']}. {additional_router_info}.",
+    "interview_agent_instruction": f"{interview_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {interview_agent_info['agent_duties']}.",
     "planner_agent_instruction": f"{planner_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {planner_agent_info['agent_duties']}.",
     "tracking_agent_instruction": f"{tracking_agent_info['agent_description']}. {agent_info['project_description']}. There are {agent_info['amount_of_agents']} agents in this app - {agent_info['agents_description']}. {tracking_agent_info['agent_duties']}.",    
 }

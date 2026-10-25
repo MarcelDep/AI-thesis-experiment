@@ -68,9 +68,8 @@ class RouterResponse(BaseModel):
     justification: str = Field(..., description="Short explanation of why you chose this agent.")
 
 class AgentResponse(BaseModel):
-    thought: str = Field(..., description="Reason about what to do next - thinking proces before final response or action.")
-    content: str = Field(..., description="Your actual response text - answer to user or action.")
-    update_state: Literal[True, False] = Field(..., description="Ture or False - set True if state should be updated with new information, False if everything is up to date")
+    content: str = Field(..., description="Your actual response text")
+    update_state: bool = Field(..., description="Ture or False - set True if state should be updated with new information, False if everything is up to date")
 
 # Langgraph classes - extraction
 class InterviewExtraction(BaseModel):
@@ -127,6 +126,7 @@ class State(TypedDict):
     current_date: str
     conv_summary: Annotated[list, add_messages]
     choosed_agent: str
+    update_state: bool
     interview_state: InterviewState
     planner_state: PlannerState
     tracking_state: TrackingState

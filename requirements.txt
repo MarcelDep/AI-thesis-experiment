@@ -7,3 +7,4 @@ PyGithub
 python-dotenv
 langgraph
 langchain
+langchain-google-vertexai
