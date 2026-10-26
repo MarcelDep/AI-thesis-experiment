@@ -13,12 +13,14 @@ llm = config.llm
 @tool
 def user_location():
     """Get the approximate location of the user."""
+    print(f'----TOOL user_location was called')
     location = geocoder.ip('me')
     return f"DONT CALL user_location tool output: the user is in city: {location.city}, country: {location.country}."
 
 @tool
 def get_commit_messages(runtime: ToolRuntime):
     """Fetch the list of  commits (message and SHA) from the user's GitHub repository."""
+    print(f'----TOOL get_commit_messages was called')
     state = runtime.state
     headers = {"Authorization": f"Bearer {os.getenv('GITHUB_PAT')}", "Accept": "application/vnd.github+json",}
     response = requests.get(f'https://api.github.com/repos/{state.github_variables.owner}/{state.github_variables.repo}/commits', headers=headers)
@@ -43,6 +45,7 @@ def get_commit_messages(runtime: ToolRuntime):
 @tool
 def get_commit_diff(runtime: ToolRuntime) -> str:
     """Fetch the code changes between two commits of the user's GitHub repository."""
+    print(f'----TOOL get_commit_diff was called')    
     state = runtime.state
     prompt = state["messages"][-1]
 
@@ -84,6 +87,7 @@ def get_commit_diff(runtime: ToolRuntime) -> str:
 @tool
 def modify_tasks_status(runtime: ToolRuntime) -> dict:
     """Update the status of tasks in the project plan based on the fetched commits and diff."""
+    print(f'----TOOL modify_tasks_status was called')    
     state = runtime.state
     planner_state = state.planner_state
     tracking_state = state.tracking_state

@@ -4,8 +4,6 @@ import agents
 import schemas
 from langgraph.graph import StateGraph, START, END
 
-print(config.LLM_CONFIG["interview_agent_instruction"])
-
 State = schemas.State
 
 interview = agents.InterviewAgent()

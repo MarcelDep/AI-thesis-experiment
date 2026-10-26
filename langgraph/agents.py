@@ -7,6 +7,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langchain.agents.middleware import dynamic_prompt, ModelRequest
 from langchain.agents.structured_output import ToolStrategy
 
+thread_config = {"configurable": {"thread_id": "1"}}
 
 interview_agent_tools = [tools.user_location,]
 planner_agent_tools = [tools.user_location,]
@@ -19,9 +20,10 @@ class Agent():
         prompt = state["messages"][-1]
         print(f'----AGENT {state["choosed_agent"]} will respond')
         result = self.agent.invoke(
-            {"messages": [{"role": "user", "content": prompt}]}, self.thread_config,
+            {"messages": [prompt]}, config=thread_config,
         )
         structured_output = result.get("structured_response")
+        print(f'----AGENT {state["choosed_agent"]} answer: {structured_output}')
         return {
             "messages": [structured_output.content],
             "update_state": structured_output.update_state
@@ -55,20 +57,19 @@ def router(state: schemas.State):
 
 class InterviewAgent(Agent):
     @dynamic_prompt
-    def dynamic_system_prompt(state: config.State) -> str:
-        interview_agent_state = state.get("interview_state")
+    def dynamic_system_prompt(request) -> str:
+        interview_agent_state = request.state.get("interview_state")
         system_prompt = config.LLM_CONFIG["interview_agent_instruction"] + f"\nInformation you've gathered by now: {interview_agent_state}.\nCurrent date:{date.today()}"
         return system_prompt
 
     def __init__(self):
-        self.thread_config = {"configurable": {"thread_id": "1"}},
         self.agent = create_agent(
             model=llm, 
             tools=interview_agent_tools,
-            system_prompt=self.dynamic_system_prompt,
+            middleware=[self.dynamic_system_prompt],
             response_format=ToolStrategy(schemas.AgentResponse),
-            state_schema=config.State,
-            checkpointer=InMemorySaver())
+            checkpointer=InMemorySaver(),
+        )
 
     def extract_state(self, state: schemas.State):
         print(f'----AGENT {state["choosed_agent"]} response will be extracted to its state')
@@ -83,14 +84,14 @@ class InterviewAgent(Agent):
             {"role": "user", "content": f"User prompt from which you're supposed to extract info form: {prompt}."}
         ])
 
-        print(f"----EXTRACTION of {state['choosed_agent']} state: {response.content}")
-        return {"interview_state": response.content}
+        print(f"----EXTRACTION of {state['choosed_agent']} state: {response.model_dump()}")
+        return {"interview_state": response.model_dump()}
 
 class PlannerAgent(Agent):
     @dynamic_prompt
-    def dynamic_system_prompt(state: config.State) -> str:
-        interview_agent_state = state.get("interview_state")
-        planner_agent_state = state.get("planner_state")
+    def dynamic_system_prompt(request) -> str:
+        interview_agent_state = request.state.get("interview_state")
+        planner_agent_state = request.state.get("planner_state")
         system_prompt = config.LLM_CONFIG["planner_agent_instruction"] + f"\nInformation that interview agent gathered: {interview_agent_state}.\nPlans you've made by far: {planner_agent_state}.\nCurrent date:{date.today()}"
         return system_prompt
 
@@ -98,9 +99,10 @@ class PlannerAgent(Agent):
         self.agent = create_agent(
             model=llm, 
             tools=planner_agent_tools,
-            system_prompt=self.dynamic_system_prompt,
+            middleware=[self.dynamic_system_prompt],
             response_format=ToolStrategy(schemas.AgentResponse),
-            state_schema=config.State)
+            checkpointer=InMemorySaver(),
+            )
 
     def extract_state(self, state: schemas.State, generated_answer: str,):
         print(f'----AGENT {state["choosed_agent"]} response will be extracted to its state')
@@ -115,13 +117,13 @@ class PlannerAgent(Agent):
             {"role": "user", "content": f"CURRENT PLANNER STATE: {state.planner_state}. Agent answer you're supposed to extract info form - {generated_answer}."}
         ])
 
-        print(f"----EXTRACTION of {state.choosed_agent} state: {response.content}")
-        return {"planner_state": response.content}
+        print(f"----EXTRACTION of {state.choosed_agent} state: {response.model_dump()}")
+        return {"planner_state": response.model_dump()}
 
 class TrackingAgent(Agent):
     @dynamic_prompt
-    def dynamic_system_prompt(state: config.State) -> str:
-        planner_agent_state = state.get("planner_state")
+    def dynamic_system_prompt(request) -> str:
+        planner_agent_state = request.state.get("planner_state")
         system_prompt = config.LLM_CONFIG["tracking_agent_instruction"] + f"\nPlans that planner agent has made: {planner_agent_state}.\nCurrent date:{date.today()}"
         return system_prompt
 
@@ -129,9 +131,10 @@ class TrackingAgent(Agent):
         self.agent = create_agent(
             model=llm, 
             tools=tracking_agent_tools,
-            system_prompt=self.dynamic_system_prompt,
+            middleware=[self.dynamic_system_prompt],
             response_format=ToolStrategy(schemas.AgentResponse),
-            state_schema=config.State)
+            checkpointer=InMemorySaver(),
+            )
 
     def extract_state(self, state: schemas.State, generated_answer: str):
         print(f'----AGENT {state["choosed_agent"]} response will be extracted to its state')
@@ -146,8 +149,8 @@ class TrackingAgent(Agent):
             {"role": "user", "content": f"Agent answer and tool output (if empty - none tool was called) from which you're supposed to extract info form: AGENT ANSWER - {generated_answer} PROMPT - {prompt}"}
         ])
 
-        print(f"----EXTRACTION of {state.choosed_agent} state: {response.content}")
-        return {"tracking_state".last_diff: response.content}
+        print(f"----EXTRACTION of {state.choosed_agent} state: {response.model_dump()}")
+        return {"tracking_state".last_diff: response.model_dump()}
 
 def summarize(state: schemas.State) -> str:
     response = llm.invoke([
