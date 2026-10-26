@@ -111,3 +111,5 @@ update state na true i całość pójdzie do ekstrakcji
 
 !! mozliwosc podlądu pełnych plików github przez agenta po pozwoleniu uzytkownika + funkcja odmowy dostępu do commit wybranych/wszystkich msg i do diffów między wybranymi commitami
 !! podsumowanie po 30 wiadomościach
+
+Dodaj ekstrakcje interview przed odpowiedzia interview jezeli state nie jest zapelniony
