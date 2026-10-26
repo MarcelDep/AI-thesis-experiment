@@ -17,24 +17,13 @@ llm = config.llm
 class Agent():
     def response(self, state: schemas.State):
         prompt = state["messages"][-1]
-        conv_history = state["messages"]
-        interview_state = state["interview_state"]
-        planner_state = state["planner_state"]
-        tracking_state = state["tracking_state"]
-        print(f'----AGENT {state["choosed_agent"]} will response')
-
+        print(f'----AGENT {state["choosed_agent"]} will respond')
         result = self.agent.invoke(
             {
                 "messages": [{"role": "user", "content": prompt}],
-                "conv_history": conv_history,
-                "interview_state": interview_state,
-                "planner_state": planner_state,
-                "tracking_state": tracking_state,
             }
         )
-
         structured_output = result.get("structured_response")
-
         return {
             "messages": [structured_output.content],
             "update_state": structured_output.update_state
@@ -44,21 +33,24 @@ class Agent():
         ...
 
 def router(state: schemas.State):
-    prompt = state["messages"][-1]
-    conv_history = state["messages"]
-    interview_state = state["interview_state"]
-    planner_state = state["planner_state"]
-    tracking_state = state["tracking_state"]
+    interview_agent_state = state.get("interview_state")
+    planner_agent_state = state.get("planner_state")
+    tracking_agent_state = state.get("tracking_agent")
+
+    system_prompt = (
+        config.LLM_CONFIG["router_instruction"] + 
+        f"\nInformation that interview agent gathered: {interview_agent_state}"
+        f"\nPlans that planner agent has made: {planner_agent_state}"
+        f"\nTracking agent state: {tracking_agent_state}"
+    )
 
     router_llm = llm.with_structured_output(schemas.RouterResponse)
 
-    decision = router_llm.invoke([
-        {
-            "role": "system",
-            "content": config.LLM_CONFIG["router_instruction"]
-        },
-        {"role": "user", "content": f"USER PROMPT: {prompt}. CONVERSATION HISTORY: {conv_history}. INTERVIEW AGENT STATE: {interview_state}. PLANNER AGENT STATE: {planner_state}. TRACKING AGENT STATE: {tracking_state}"}
-    ])
+    messages = [
+        {"role": "system", "content": system_prompt}
+    ] + state["messages"]
+
+    decision = router_llm.invoke(messages)
 
     print(f"----ROUTER picked {decision.choosed_agent} to respond because {decision.justification}")
     return {"choosed_agent": decision.choosed_agent}
