@@ -122,6 +122,7 @@ class TaskStatusUpdates(BaseModel):
 
 # State
 class State(AgentState):
+    messages: Annotated[list, add_messages]
     conv_summary: Annotated[list, add_messages]
     choosed_agent: str
     update_state: bool
