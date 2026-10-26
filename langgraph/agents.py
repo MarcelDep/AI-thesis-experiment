@@ -1,10 +1,12 @@
 import tools
 import config
 import schemas
-from   langchain.agents                   import create_agent
-from   langchain.agents.structured_output import ToolStrategy
-from   langgraph.checkpoint.memory        import InMemorySaver  
-from   langchain.agents.middleware        import dynamic_prompt, ModelRequest
+from datetime import date
+from langchain.agents import create_agent
+from langgraph.checkpoint.memory import InMemorySaver  
+from langchain.agents.middleware import dynamic_prompt, ModelRequest
+from langchain.agents.structured_output import ToolStrategy
+
 
 interview_agent_tools = [tools.user_location,]
 planner_agent_tools = [tools.user_location,]
@@ -65,7 +67,7 @@ class InterviewAgent(Agent):
     @dynamic_prompt
     def dynamic_system_prompt(state: config.State) -> str:
         interview_agent_state = state.get("interview_state")
-        system_prompt = config.LLM_CONFIG["interview_agent_instruction"] + f"\nInformation you've gathered by now: {interview_agent_state}"
+        system_prompt = config.LLM_CONFIG["interview_agent_instruction"] + f"\nInformation you've gathered by now: {interview_agent_state}.\nCurrent date:{date.today()}"
         return system_prompt
 
     def __init__(self):
@@ -99,7 +101,7 @@ class PlannerAgent(Agent):
     def dynamic_system_prompt(state: config.State) -> str:
         interview_agent_state = state.get("interview_state")
         planner_agent_state = state.get("planner_state")
-        system_prompt = config.LLM_CONFIG["planner_agent_instruction"] + f"\nInformation that interview agent gathered: {interview_agent_state}.\nPlans you've made by far: {planner_agent_state}"
+        system_prompt = config.LLM_CONFIG["planner_agent_instruction"] + f"\nInformation that interview agent gathered: {interview_agent_state}.\nPlans you've made by far: {planner_agent_state}.\nCurrent date:{date.today()}"
         return system_prompt
 
     def __init__(self):
@@ -130,7 +132,7 @@ class TrackingAgent(Agent):
     @dynamic_prompt
     def dynamic_system_prompt(state: config.State) -> str:
         planner_agent_state = state.get("planner_state")
-        system_prompt = config.LLM_CONFIG["tracking_agent_instruction"] + f"\nPlans that planner agent has made: {planner_agent_state}"
+        system_prompt = config.LLM_CONFIG["tracking_agent_instruction"] + f"\nPlans that planner agent has made: {planner_agent_state}.\nCurrent date:{date.today()}"
         return system_prompt
 
     def __init__(self):

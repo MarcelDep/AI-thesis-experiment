@@ -3,7 +3,6 @@ import config
 import agents
 import schemas
 from langgraph.graph import StateGraph, START, END
-from datetime import date
 
 print(config.LLM_CONFIG["interview_agent_instruction"])
 
@@ -54,9 +53,8 @@ graph_builder.add_edge("tracking_extraction", END)
 graph = graph_builder.compile()
 
 def run_chatbot():
-    state = {"messages": [],
-    "rag": "",
-    "current_date": date.today(),
+    state = {
+    "messages": [],
     "conv_summary": [],
     "choosed_agent": '',
     "update_state": False,
