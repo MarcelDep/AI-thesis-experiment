@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Literal, Annotated
 from typing_extensions import TypedDict
 from langgraph.graph.message import add_messages
+from langchain.agents import AgentState
 
 # Datatype
 class Task(BaseModel):
@@ -120,8 +121,7 @@ class TaskStatusUpdates(BaseModel):
     updates: list[TaskStatusUpdate] = Field([], description="Only tasks you are sure about. Empty list if none.")
 
 # State
-class State(TypedDict):
-    messages: Annotated[list, add_messages]
+class State(AgentState):
     rag: str
     current_date: str
     conv_summary: Annotated[list, add_messages]

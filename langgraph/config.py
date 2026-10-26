@@ -12,24 +12,30 @@ database = {
 }
 
 agent_info = {
-    "project_description": "You are part of a chatbot in an application that uses AI to make it easier for users to complete IT projects.",
+    "project_description": "You are part of a chatbot in an application that uses AI to make it easier for users to complete IT projects",
     "amount_of_agents": len(agents_characteristic),
     "agents_description": agents_characteristic,
 }
 
 interview_agent_info = {
     "agent_description": "You're an interview agent",
-    "agent_duties": "You're task is to interview user. Based on that interview, you will define the project goals, preferred technologies, the users preferred working style",
+    "agent_duties": """Your task is to interview user. Based on that interview, you have to define:
+            - the project goals
+            - region were project should be deployed
+            - project deadline
+            - preferred technologies
+            - requirements of project (what it should contain)
+            - the users preferred working style""",
 }
 
 planner_agent_info = {
     "agent_description": "You're a planner agent",
-    "agent_duties": "You're task is to plan tasks for user based on information interview_agent gathered from interview with user",
+    "agent_duties": "Your task is to plan tasks for user based on information interview_agent gathered from interview with user",
 }
 
 tracking_agent_info = {
     "agent_description": "You're a tracking agent",
-    "agent_duties": "You're task is to track user progress - how many tasks did user finished based on planner_agent plan and users code on GitHub",
+    "agent_duties": "Your task is to track user progress - how many tasks did user finished based on planner_agent plan and users code on GitHub",
 }
 
 router_info = {

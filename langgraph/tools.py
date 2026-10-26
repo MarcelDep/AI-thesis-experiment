@@ -1,3 +1,4 @@
+import os
 import config
 import schemas
 import geocoder
@@ -5,6 +6,7 @@ import requests
 from   langchain_core.tools import tool
 from   langgraph.types      import Command
 from   langchain.tools      import ToolRuntime
+from   langchain.messages   import ToolMessage
 
 llm = config.llm
 
@@ -13,9 +15,7 @@ def user_location():
     """Get the approximate location of the user."""
     
     location = geocoder.ip('me')
-    print(location)
-    print("[DEBUG] user_location CALLED")
-    return f"DONT CALL user_location tool output: the user is in city: , country: ."
+    return f"DONT CALL user_location tool output: the user is in city: {location.city}, country: {location.country}."
 
 @tool
 def get_commit_messages(runtime: ToolRuntime):
@@ -44,7 +44,7 @@ def get_commit_messages(runtime: ToolRuntime):
         response = response.json()
         commits_with_sha = [[commit["commit"]["message"],commit["sha"]] for commit in response]
         print(f"COMMIT MESSAGES: {commits_with_sha}")
-    return Command(update={"tracking_state": f"get_commit_messages tool response: {commits_with_sha}", "messages": [ToolMessage(content=f"get_commit_messages tool response: {commits_with_sha}", tool_call_id=runtime.tool_call_id)]})
+    return Command(update={"tracking_state": f"{commits_with_sha}", "messages": [ToolMessage(content=f"get_commit_messages tool response: {commits_with_sha}", tool_call_id=runtime.tool_call_id)]})
 
 @tool
 def get_commit_diff(runtime: ToolRuntime) -> str:
