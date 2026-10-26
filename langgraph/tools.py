@@ -13,23 +13,12 @@ llm = config.llm
 @tool
 def user_location():
     """Get the approximate location of the user."""
-    
     location = geocoder.ip('me')
     return f"DONT CALL user_location tool output: the user is in city: {location.city}, country: {location.country}."
 
 @tool
 def get_commit_messages(runtime: ToolRuntime):
-    """Fetch the list of recent commits (message and SHA) from the user's GitHub repository.
-
-    Use this tool when the user asks about their progress, recent work, or commits,
-    and ALWAYS before get_commit_diff or modify_tasks_status, because those need the
-    SHAs from this list. Do not call it again if the commit list is already in the
-    conversation. Takes no arguments: the repository and credentials are configured
-    by the application.
-
-    Returns: list of commits with message and SHA, or an error message
-    (e.g. missing or invalid credentials).
-    """
+    """Fetch the list of  commits (message and SHA) from the user's GitHub repository."""
     state = runtime.state
     headers = {"Authorization": f"Bearer {os.getenv('GITHUB_PAT')}", "Accept": "application/vnd.github+json",}
     response = requests.get(f'https://api.github.com/repos/{state.github_variables.owner}/{state.github_variables.repo}/commits', headers=headers)
@@ -44,18 +33,16 @@ def get_commit_messages(runtime: ToolRuntime):
         response = response.json()
         commits_with_sha = [[commit["commit"]["message"],commit["sha"]] for commit in response]
         print(f"COMMIT MESSAGES: {commits_with_sha}")
-    return Command(update={"tracking_state": f"{commits_with_sha}", "messages": [ToolMessage(content=f"get_commit_messages tool response: {commits_with_sha}", tool_call_id=runtime.tool_call_id)]})
+
+    updated_tracking_state = state.tracking_state.model_copy(
+        update={"commits_msg_sha": commits_with_sha}
+    )
+
+    return Command(update={"tracking_state": updated_tracking_state, "messages": [ToolMessage(content=f"get_commit_messages tool was called", tool_call_id=runtime.tool_call_id)]})
 
 @tool
 def get_commit_diff(runtime: ToolRuntime) -> str:
-    """Fetch the code changes between two commits of the user's GitHub repository.
-
-    Use this tool ONLY when the user asks what specifically changed between commits,
-    or when commit messages are not enough to judge whether a task is done.
-    It automatically determines the correct SHAs from the conversation history.
-
-    Returns: the diff text (truncated if very long), or an error message.
-    """
+    """Fetch the code changes between two commits of the user's GitHub repository."""
     state = runtime.state
     prompt = state["messages"][-1]
 
@@ -82,29 +69,24 @@ def get_commit_diff(runtime: ToolRuntime) -> str:
             diff = "ERROR: user has provided invalid GitHub credintials. Check if they are correct and try again."
         else:
             print(f"----RESPONSE: {response['message']}")
-            commits_with_sha = "UKNOWN ERROR."
+            diff = "UKNOWN ERROR."
     else:
         print(f"----BASE and head shas: {shas.content}")
         print(response.text)
         diff = response.text[:20000]
-    return Command(update={"last_diff": f"{diff}"})
+
+    updated_tracking_state = state.tracking_state.model_copy(
+        update={"last_diff": diff}
+    )
+
+    return Command(update={"tracking_state": updated_tracking_state, "messages": [ToolMessage(content=f"get_commit_diff tool was called", tool_call_id=runtime.tool_call_id)]})
 
 @tool
 def modify_tasks_status(runtime: ToolRuntime) -> dict:
-    """Update the status of tasks in the project plan based on the fetched commits and diff.
-
-    Use this tool AFTER get_commit_messages (and optionally get_commit_diff), when the
-    user wants their progress recorded or asks which tasks are done. It requires an
-    existing plan and fetched commits, otherwise it returns an error. Call it once
-    per request; do not call it again unless new commits were fetched.
-    Takes no arguments: it reads the plan and commits itself and only marks tasks
-    it is sure about.
-
-    Returns: a summary of which tasks changed status, or "No task statuses changed".
-    """
+    """Update the status of tasks in the project plan based on the fetched commits and diff."""
     state = runtime.state
-    planner_state = state["planner_state"]
-    tracking_state = state["tracking_state"]
+    planner_state = state.planner_state
+    tracking_state = state.tracking_state
 
     if not planner_state.specific_plan:
         return {"previous_thought": [("system", "modify_tasks_status ERROR: there is no plan yet. The planner has to create one first.")]}
@@ -144,7 +126,7 @@ def modify_tasks_status(runtime: ToolRuntime) -> dict:
         changed.append(f"phase {update.phase_id} task {update.task_id}: {update.status}")
 
     summary = "Updated: " + "; ".join(changed) if changed else "No task statuses changed."
-    return {
+    return Command(update={
         "planner_state": new_plan,
-        "messages": [("system", f"modify_tasks_status RESULT: {summary}")],
-    }
+        "messages": [ToolMessage(content=f"modify_tasks_status tool was called: {summary}", tool_call_id=runtime.tool_call_id)],
+    })

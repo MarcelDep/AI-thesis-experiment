@@ -19,9 +19,7 @@ class Agent():
         prompt = state["messages"][-1]
         print(f'----AGENT {state["choosed_agent"]} will respond')
         result = self.agent.invoke(
-            {
-                "messages": [{"role": "user", "content": prompt}],
-            }
+            {"messages": [{"role": "user", "content": prompt}]}, self.thread_config,
         )
         structured_output = result.get("structured_response")
         return {
