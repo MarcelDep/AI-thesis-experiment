@@ -15,6 +15,21 @@ tracking_agent_tools = [tools.get_commit_messages, tools.get_commit_diff, tools.
 
 llm = config.llm
 
+def extract_interview_state(state: schemas.State) -> schemas.InterviewState:
+    current = state["interview_state"]
+    user_text = state["messages"][-1].content
+
+    extract_llm = llm.with_structured_output(schemas.InterviewExtraction)
+    extracted = extract_llm.invoke([
+        {"role": "system", "content": "You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."},
+        {"role": "user", "content": f"User prompt from which you're supposed to extract info: {user_text}"},
+    ])
+
+    new_values = {k: v for k, v in extracted.model_dump().items() if v.strip()}
+    updated = current.model_copy(update=new_values)
+    print(f"----EXTRACTION of interview_agent state: {updated.model_dump()}")
+    return updated
+
 class Agent():
     def response(self, state: schemas.State):
         prompt = state["messages"][-1]
@@ -33,9 +48,16 @@ class Agent():
         ...
 
 def router(state: schemas.State):
+    update = {}
     interview_agent_state = state.get("interview_state")
     planner_agent_state = state.get("planner_state")
     tracking_agent_state = state.get("tracking_agent")
+
+    print(f"----INTERVIEW AGENT TYPE: {type(interview_agent_state)}")
+
+    if any(value == "" for value in interview_agent_state.model_dump().values()):
+        interview_state = extract_interview_state(state)
+        update["interview_state"] = interview_state
 
     system_prompt = (
         config.LLM_CONFIG["router_instruction"] + 
@@ -51,9 +73,9 @@ def router(state: schemas.State):
     ] + state["messages"]
 
     decision = router_llm.invoke(messages)
-
     print(f"----ROUTER picked {decision.choosed_agent} to respond because {decision.justification}")
-    return {"choosed_agent": decision.choosed_agent}
+    update["choosed_agent"] = decision.choosed_agent
+    return update
 
 class InterviewAgent(Agent):
     @dynamic_prompt
@@ -85,7 +107,7 @@ class InterviewAgent(Agent):
         ])
 
         print(f"----EXTRACTION of {state['choosed_agent']} state: {response.model_dump()}")
-        return {"interview_state": response.model_dump()}
+        return {"interview_state": schemas.InterviewState(**response.model_dump())}
 
 class PlannerAgent(Agent):
     @dynamic_prompt
@@ -118,7 +140,7 @@ class PlannerAgent(Agent):
         ])
 
         print(f"----EXTRACTION of {state.choosed_agent} state: {response.model_dump()}")
-        return {"planner_state": response.model_dump()}
+        return {"planner_state": schemas.PlannerState(general_plan=response.general_plan, specific_plan=response.specific_plan)}
 
 class TrackingAgent(Agent):
     @dynamic_prompt
@@ -150,7 +172,7 @@ class TrackingAgent(Agent):
         ])
 
         print(f"----EXTRACTION of {state.choosed_agent} state: {response.model_dump()}")
-        return {"tracking_state".last_diff: response.model_dump()}
+        return {"tracking_state": state["tracking_state"].model_copy(update={"commits_msg_sha": response.commits_msg_sha})}
 
 def summarize(state: schemas.State) -> str:
     response = llm.invoke([

@@ -67,11 +67,7 @@ Fajnie by bylo jakby tracking agent po cichu w tle sprawdzał stan zadan na gith
 Test prompt:
 Hi i want to build an AI powered app for project management - it will be peoples (ideally in IT) project manager on their own projects
 
-Technologies: LangChain, OpenAI API, Python
-Deadline: 6 months
-Working style: I prefer to work in scrum 2 weeks per sprint
-Reqiurements: GitHub API intergation for task status checking, task scheduling and Code Review
-Region: Poland
+Technologies: LangChain, OpenAI API, Python, Deadline: 6 months, Working style: I prefer to work in scrum 2 weeks per sprint, Reqiurements: GitHub API intergation for task status checking, task scheduling and Code Review, Region: Poland
 
 Plan me something
 
@@ -113,3 +109,6 @@ update state na true i całość pójdzie do ekstrakcji
 !! podsumowanie po 30 wiadomościach
 
 Dodaj ekstrakcje interview przed odpowiedzia interview jezeli state nie jest zapelniony
+
+prompt -> router (widzi puste pola w interview state) ->
+-> interview estraction (nadal puste pola) -> router (i tu musi juz nie wybierac znowu extrakcji tylko agenta do odpowiedzi)
