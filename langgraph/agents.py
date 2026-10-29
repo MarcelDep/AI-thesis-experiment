@@ -6,6 +6,7 @@ from langchain.agents import create_agent
 from langgraph.checkpoint.memory import InMemorySaver  
 from langchain.agents.middleware import dynamic_prompt, ModelRequest
 from langchain.agents.structured_output import ToolStrategy
+from langchain.messages import AIMessage, HumanMessage, SystemMessage
 
 thread_config = {"configurable": {"thread_id": "1"}}
 
@@ -32,15 +33,16 @@ def extract_interview_state(state: schemas.State) -> schemas.InterviewState:
 
 class Agent():
     def response(self, state: schemas.State):
+        print(f"----MESSEGES: {state['messages']}")
         prompt = state["messages"][-1]
         print(f'----AGENT {state["choosed_agent"]} will respond')
         result = self.agent.invoke(
-            {"messages": [prompt]}, config=thread_config,
+            {"messages": [prompt], **state,}, config=thread_config,
         )
         structured_output = result.get("structured_response")
         print(f'----AGENT {state["choosed_agent"]} answer: {structured_output}')
-        return {
-            "messages": [structured_output.content],
+        return { 
+            "messages": [AIMessage(content=structured_output.content)],
             "update_state": structured_output.update_state
             }
 
@@ -91,6 +93,7 @@ class InterviewAgent(Agent):
             middleware=[self.dynamic_system_prompt],
             response_format=ToolStrategy(schemas.AgentResponse),
             checkpointer=InMemorySaver(),
+            state_schema=schemas.State,
         )
 
     def extract_state(self, state: schemas.State):
@@ -124,11 +127,14 @@ class PlannerAgent(Agent):
             middleware=[self.dynamic_system_prompt],
             response_format=ToolStrategy(schemas.AgentResponse),
             checkpointer=InMemorySaver(),
+            state_schema=schemas.State,
             )
 
-    def extract_state(self, state: schemas.State, generated_answer: str,):
+    def extract_state(self, state: schemas.State):
+        print(f"----MESSEGES: {state['messages']}")
+        generated_answer = state["messages"][-1]
         print(f'----AGENT {state["choosed_agent"]} response will be extracted to its state')
-        prompt = state["messages"][-1]
+        prompt = state["messages"][-2]
         extract_llm = llm.with_structured_output(schemas.PlannerExtraction)
 
         response = extract_llm.invoke([
@@ -136,10 +142,10 @@ class PlannerAgent(Agent):
                 "role": "system",
                 "content": f"You are a data extraction assistant. Extract only the fields requested. Do not infer, expand, or add context. Return empty string for unknown fields."
             },
-            {"role": "user", "content": f"CURRENT PLANNER STATE: {state.planner_state}. Agent answer you're supposed to extract info form - {generated_answer}."}
+            {"role": "user", "content": f"CURRENT PLANNER STATE: {state['planner_state']}. Agent answer you're supposed to extract info form - {generated_answer}."}
         ])
 
-        print(f"----EXTRACTION of {state.choosed_agent} state: {response.model_dump()}")
+        print(f"----EXTRACTION of {state['choosed_agent']} state: {response.model_dump()}")
         return {"planner_state": schemas.PlannerState(general_plan=response.general_plan, specific_plan=response.specific_plan)}
 
 class TrackingAgent(Agent):
@@ -156,6 +162,7 @@ class TrackingAgent(Agent):
             middleware=[self.dynamic_system_prompt],
             response_format=ToolStrategy(schemas.AgentResponse),
             checkpointer=InMemorySaver(),
+            state_schema=schemas.State,
             )
 
     def extract_state(self, state: schemas.State, generated_answer: str):
@@ -171,7 +178,7 @@ class TrackingAgent(Agent):
             {"role": "user", "content": f"Agent answer and tool output (if empty - none tool was called) from which you're supposed to extract info form: AGENT ANSWER - {generated_answer} PROMPT - {prompt}"}
         ])
 
-        print(f"----EXTRACTION of {state.choosed_agent} state: {response.model_dump()}")
+        print(f"----EXTRACTION of {state['choosed_agent']} state: {response.model_dump()}")
         return {"tracking_state": state["tracking_state"].model_copy(update={"commits_msg_sha": response.commits_msg_sha})}
 
 def summarize(state: schemas.State) -> str:

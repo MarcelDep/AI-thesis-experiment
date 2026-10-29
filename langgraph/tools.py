@@ -22,46 +22,62 @@ def get_commit_messages(runtime: ToolRuntime):
     """Fetch the list of  commits (message and SHA) from the user's GitHub repository."""
     print(f'----TOOL get_commit_messages was called')
     state = runtime.state
-    headers = {"Authorization": f"Bearer {os.getenv('GITHUB_PAT')}", "Accept": "application/vnd.github+json",}
-    response = requests.get(f'https://api.github.com/repos/{state.github_variables.owner}/{state.github_variables.repo}/commits', headers=headers)
-    if response.status_code != 200:
-        if response["message"] == "Bad credentials":
-            print(f"----RESPONSE: {response['message']}")
-            commits_with_sha = "ERROR: user has provided invalid GitHub credintials. Check if they are correct and try again."
-        else:
-            print(f"----RESPONSE: {response['message']}")
-            commits_with_sha = "UKNOWN ERROR." 
+    print(f"TRACKING STATE TYPE {type(state["tracking_state"])}")
+    print(f'----STATE: {state["tracking_state"]}')
+    gh = state["github_variables"]
+    tracking = state["tracking_state"]
+    update = {}
+    if not gh.owner or not gh.repo:
+        text = "ERROR: GitHub owner or repo is not set. Ask the user to fill them in the sidebar."
     else:
-        response = response.json()
-        commits_with_sha = [[commit["commit"]["message"],commit["sha"]] for commit in response]
-        print(f"COMMIT MESSAGES: {commits_with_sha}")
+        headers = {"Authorization": f"Bearer {os.getenv('GITHUB_PAT')}", "Accept": "application/vnd.github+json",}
+        response = requests.get(f'https://api.github.com/repos/{gh.owner}/{gh.repo}/commits', headers=headers)
+        if response.status_code != 200:
+            if response["message"] == "Bad credentials":
+                print(f"----RESPONSE: {response['message']}")
+                text  = "ERROR: user has provided invalid GitHub credintials. Check if they are correct and try again."
+            else:
+                print(f"----RESPONSE: {response['message']}")
+                text = "UKNOWN ERROR." 
+        else:
+            response = response.json()
+            commits_with_sha = [
+                schemas.CommitsMsgSha(
+                    commit_message=commit["commit"]["message"],
+                    commit_sha=commit["sha"],
+                )
+                for commit in response
+            ]
+            print(f"COMMIT MESSAGES: {commits_with_sha}")
+            update["tracking_state"] = tracking.model_copy(update={"commits_msg_sha": commits_with_sha})
+            updated_tracking_state = state['tracking_state'].model_copy(update={"commits_msg_sha": commits_with_sha})
+            text = f"Commit messeges resolved correctly: {commits_with_sha}"
 
-    updated_tracking_state = state.tracking_state.model_copy(
-        update={"commits_msg_sha": commits_with_sha}
-    )
-
-    return Command(update={"tracking_state": updated_tracking_state, "messages": [ToolMessage(content=f"get_commit_messages tool was called", tool_call_id=runtime.tool_call_id)]})
+    update["messages"] = [ToolMessage(content=text, tool_call_id=runtime.tool_call_id)]
+    return Command(update=update)
 
 @tool
 def get_commit_diff(runtime: ToolRuntime) -> str:
-    """Fetch the code changes between two commits of the user's GitHub repository."""
-    print(f'----TOOL get_commit_diff was called')    
+    """Fetch the code changes between two commits of the user's GitHub repository."""    
+    print(f'----TOOL get_commit_diff was called')
     state = runtime.state
+    print(f"TRACKING STATE TYPE {type(state["tracking_state"])}")
+    print(f'----STATE: {state["tracking_state"]}')
     prompt = state["messages"][-1]
-
+    print(f"----BEFORE SHA EXTRACTION CALLED")
     extract_llm = llm.with_structured_output(schemas.TrackingShaExtraction)
-
+    print(f"----SHA EXTRACTION CALLED")
     shas = extract_llm.invoke([
         {
             "role": "system",
             "content": f"You're extraction agent. Other agent decided that it needs to get diff of two github commits. Based on conversation history, user prompt and list of commit messages pick base_sha and head_sha values. Both base_sha and head_sha are sha's of commits from list. Base sha is base commit and changes in head sha will be compared to base sha commit."
         },
-        {"role": "user", "content": f'CONVERSATION HISTORY: {state["messages"]}, AGENT THINKING HISTORY FROM NEWEST USER PROMPT: {state["previous_thought"]}, USER_PROMPT: {prompt}, LIST OF COMMITS AND THEIR SHAs {state["tracking_state"]}'}
+        {"role": "user", "content": f'CONVERSATION HISTORY: {state["messages"]}, USER_PROMPT: {prompt}, LIST OF COMMITS AND THEIR SHAs {state["tracking_state"]}'}
     ])
-
+    print(f"----SHA EXTRACTION FINISHED")
     headers = {"Authorization": f"Bearer {os.getenv('GITHUB_PAT')}", "Accept": "application/vnd.github.diff",}
     basehead = f"{shas.base_sha}...{shas.head_sha}"
-    response = requests.get(f'https://api.github.com/repos/{state.github_variables.owner}/{state.github_variables.repo}/compare/{basehead}', headers=headers)
+    response = requests.get(f'https://api.github.com/repos/{state["github_variables"].owner}/{state["github_variables"].repo}/compare/{basehead}', headers=headers)
     print("STATUS:", response.status_code)
     print("CONTENT-TYPE:", response.headers.get("Content-Type"))
     print("URL:", response.url)
@@ -74,15 +90,22 @@ def get_commit_diff(runtime: ToolRuntime) -> str:
             print(f"----RESPONSE: {response['message']}")
             diff = "UKNOWN ERROR."
     else:
-        print(f"----BASE and head shas: {shas.content}")
+        print(f"----BASE and head shas: {shas}")
         print(response.text)
         diff = response.text[:20000]
 
-    updated_tracking_state = state.tracking_state.model_copy(
+    tracking_state = state["tracking_state"]
+
+    updated_tracking_state = tracking_state.model_copy(
         update={"last_diff": diff}
     )
 
-    return Command(update={"tracking_state": updated_tracking_state, "messages": [ToolMessage(content=f"get_commit_diff tool was called", tool_call_id=runtime.tool_call_id)]})
+    return Command(
+        update={
+            "tracking_state": updated_tracking_state,
+            "messages": [ToolMessage(
+                    content="get_commit_diff tool was called",
+                    tool_call_id=runtime.tool_call_id,)]})
 
 @tool
 def modify_tasks_status(runtime: ToolRuntime) -> dict:
