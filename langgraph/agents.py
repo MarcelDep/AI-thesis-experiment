@@ -39,12 +39,20 @@ class Agent():
         result = self.agent.invoke(
             {"messages": [prompt], **state,}, config=thread_config,
         )
+        print(f"----RESULT {result}")
         structured_output = result.get("structured_response")
         print(f'----AGENT {state["choosed_agent"]} answer: {structured_output}')
-        return { 
+        response = {
             "messages": [AIMessage(content=structured_output.content)],
-            "update_state": structured_output.update_state
-            }
+            "update_state": structured_output.update_state,
+        }
+
+        if state["choosed_agent"] == "tracking_agent":
+            for key in ["tracking_state", "planner_state"]:
+                if result[key] != state[key]:
+                    response[key] = result[key]
+
+        return response
 
     def extract_state(self):
         ...
@@ -165,9 +173,10 @@ class TrackingAgent(Agent):
             state_schema=schemas.State,
             )
 
-    def extract_state(self, state: schemas.State, generated_answer: str):
+    def extract_state(self, state: schemas.State,):
         print(f'----AGENT {state["choosed_agent"]} response will be extracted to its state')
         prompt = state["messages"][-1]
+        generated_answer = state["messages"][-1]
         extract_llm = llm.with_structured_output(schemas.TrackingExtraction)
 
         response = extract_llm.invoke([

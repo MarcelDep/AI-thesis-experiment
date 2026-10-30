@@ -112,13 +112,17 @@ def modify_tasks_status(runtime: ToolRuntime) -> dict:
     """Update the status of tasks in the project plan based on the fetched commits and diff."""
     print(f'----TOOL modify_tasks_status was called')    
     state = runtime.state
-    planner_state = state.planner_state
-    tracking_state = state.tracking_state
+    planner_state = state["planner_state"]
+    tracking_state = state["tracking_state"]
 
     if not planner_state.specific_plan:
-        return {"previous_thought": [("system", "modify_tasks_status ERROR: there is no plan yet. The planner has to create one first.")]}
+        return Command(update={"messages": [ToolMessage(
+            content="modify_tasks_status ERROR: there is no plan yet. The planner has to create one first.",
+            tool_call_id=runtime.tool_call_id,)]})
     if not tracking_state.commits_msg_sha and not tracking_state.last_diff:
-        return {"previous_thought": [("system", "modify_tasks_status ERROR: no commit data. Call get_commit_messages first.")]}
+        return Command(update={"messages": [ToolMessage(
+            content="modify_tasks_status ERROR: no commit data. Call get_commit_messages first.",
+            tool_call_id=runtime.tool_call_id,)]})
 
     tasks_text = "\n".join(
         f"phase {phase.phase_id} | task {task.task_id} | {task.task_name} | {task.status}"
@@ -141,6 +145,8 @@ def modify_tasks_status(runtime: ToolRuntime) -> dict:
         )},
     ])
 
+    print(f"----RESULT {result}")
+
     new_plan = planner_state.model_copy(deep=True)
     tasks = {(phase.phase_id, task.task_id): task for phase in new_plan.specific_plan for task in phase.tasks}
 
@@ -153,6 +159,9 @@ def modify_tasks_status(runtime: ToolRuntime) -> dict:
         changed.append(f"phase {update.phase_id} task {update.task_id}: {update.status}")
 
     summary = "Updated: " + "; ".join(changed) if changed else "No task statuses changed."
+    print(f"----SUMMARY {summary}")
+    print(f"----NEW PLAN {new_plan}")
+    print(f"----NEW PLAN TYPE {type(new_plan)}")
     return Command(update={
         "planner_state": new_plan,
         "messages": [ToolMessage(content=f"modify_tasks_status tool was called: {summary}", tool_call_id=runtime.tool_call_id)],
