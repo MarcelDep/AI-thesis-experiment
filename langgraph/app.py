@@ -10,7 +10,7 @@ import sys
 import streamlit as st
 from dotenv import load_dotenv
 
-load_dotenv()  # before importing graph: models and tools read env variables at import time
+load_dotenv()
 
 import schemas
 import graph as graph_module
