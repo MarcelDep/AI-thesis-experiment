@@ -10,3 +10,5 @@ langchain
 langchain-google-vertexai
 "langchain[mcp]"
 streamlit[auth]
+st-supabase-connection
+supabase

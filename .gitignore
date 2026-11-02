@@ -7,3 +7,4 @@ chromadb
 **/logs
 .env
 secrets.toml
+.supabase_creds
