@@ -22,7 +22,7 @@ def get_commit_messages(runtime: ToolRuntime):
     """Fetch the list of  commits (message and SHA) from the user's GitHub repository."""
     print(f'----TOOL get_commit_messages was called')
     state = runtime.state
-    print(f"TRACKING STATE TYPE {type(state["tracking_state"])}")
+    print(f"TRACKING STATE TYPE {type(state['tracking_state'])}")
     print(f'----STATE: {state["tracking_state"]}')
     gh = state["github_variables"]
     tracking = state["tracking_state"]
@@ -50,7 +50,6 @@ def get_commit_messages(runtime: ToolRuntime):
             ]
             print(f"COMMIT MESSAGES: {commits_with_sha}")
             update["tracking_state"] = tracking.model_copy(update={"commits_msg_sha": commits_with_sha})
-            updated_tracking_state = state['tracking_state'].model_copy(update={"commits_msg_sha": commits_with_sha})
             text = f"Commit messeges resolved correctly: {commits_with_sha}"
 
     update["messages"] = [ToolMessage(content=text, tool_call_id=runtime.tool_call_id)]
@@ -61,7 +60,7 @@ def get_commit_diff(runtime: ToolRuntime) -> str:
     """Fetch the code changes between two commits of the user's GitHub repository."""    
     print(f'----TOOL get_commit_diff was called')
     state = runtime.state
-    print(f"TRACKING STATE TYPE {type(state["tracking_state"])}")
+    print(f"TRACKING STATE TYPE {type(state['tracking_state'])}")
     print(f'----STATE: {state["tracking_state"]}')
     prompt = state["messages"][-1]
     print(f"----BEFORE SHA EXTRACTION CALLED")
@@ -72,7 +71,7 @@ def get_commit_diff(runtime: ToolRuntime) -> str:
             "role": "system",
             "content": f"You're extraction agent. Other agent decided that it needs to get diff of two github commits. Based on conversation history, user prompt and list of commit messages pick base_sha and head_sha values. Both base_sha and head_sha are sha's of commits from list. Base sha is base commit and changes in head sha will be compared to base sha commit."
         },
-        {"role": "user", "content": f'CONVERSATION HISTORY: {state["messages"]}, USER_PROMPT: {prompt}, LIST OF COMMITS AND THEIR SHAs {state["tracking_state"]}'}
+        {"role": "user", "content": f"CONVERSATION HISTORY: {state['messages']}, USER_PROMPT: {prompt}, LIST OF COMMITS AND THEIR SHAs {state['tracking_state']}"}
     ])
     print(f"----SHA EXTRACTION FINISHED")
     headers = {"Authorization": f"Bearer {os.getenv('GITHUB_PAT')}", "Accept": "application/vnd.github.diff",}
