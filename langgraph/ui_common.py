@@ -88,21 +88,14 @@ def initial_state():
         "github_variables": schemas.GithubVariables(),
     }
 
-
-@st.cache_resource
-def _ensure_db():
-    storage.init_db()
-    return True
-
-
 def init_session():
-    """Called once per run from app.py, so every page can rely on these keys."""
-    _ensure_db()
+    """Called once per run from app.py."""
     st.session_state.setdefault("busy", False)
     st.session_state.setdefault("pending", None)
     st.session_state.setdefault("gh_repo", "")
     st.session_state.setdefault("gh_owner", "")
     st.session_state.setdefault("conv_id", None)
+
     if "graph_state" not in st.session_state:
         st.session_state.graph_state = initial_state()
         st.session_state.chat = []
@@ -200,4 +193,4 @@ def run_turn(user_text):
                 st.session_state.conv_id, email, st.session_state.chat, st.session_state.graph_state
             )
         except Exception as exc:                         # a storage problem must not break the chat
-            print(f"----STORAGE could not save the conversation: {exc}")
+            print(f"----storage could not save the conversation: {exc}")
