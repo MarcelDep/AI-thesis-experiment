@@ -7,10 +7,6 @@ agents_characteristic = {
     'tracking_agent': '"tracking_agent" monitors GitHub commits and assesses whether planned tasks are correctly implemented',
 }
 
-database = {
-    "THRESHOLD": 0.3,
-}
-
 agent_info = {
     "project_description": "You are part of a chatbot in an application that uses AI to make it easier for users to complete IT projects",
     "amount_of_agents": len(agents_characteristic),

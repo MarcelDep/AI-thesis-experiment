@@ -12,8 +12,9 @@ saved. Logged-in users additionally get saved history and the GitHub inputs.
 """
 import streamlit as st
 from dotenv import load_dotenv
+from datetime import datetime, timezone
 
-load_dotenv()  # before importing modules that create models / read env variables
+load_dotenv()
 
 import storage
 import ui_common as ui
@@ -27,6 +28,9 @@ def log_out():
     ui.reset_conversation()
     st.logout()
 
+supabase = storage.supabase
+
+dt = datetime.now(timezone.utc).isoformat()
 
 logged_in = st.user.is_logged_in
 busy = st.session_state.busy
@@ -36,14 +40,49 @@ states_page = st.Page("views/agent_states.py", title="Agent states", icon="📁"
 trace_page = st.Page("views/agent_trace.py", title="Agent trace", icon="🔍")
 about_page = st.Page("views/about.py", title="About", icon="ℹ️")
 login_page = st.Page("views/login.py", title="Log in")
+users_page = st.Page("views/admin/users.py", title="Users")
 
 details = [states_page, trace_page, about_page]
+admin_panel = [users_page,]
 
 if logged_in:
-    pg = st.navigation({
-        "Home": [chat_page],
-        "Details": details,
-    })
+    email = st.user.email
+    user_response = (
+        supabase.table("users")
+        .select("role")
+        .eq("email", email)
+        .execute()
+    )
+
+    if user_response.data:
+        role = user_response.data[0]["role"]
+
+        supabase.table("users").update({
+            "last_login": dt
+        }).eq("email", email).execute()
+
+    else:
+        supabase.table("users").insert({
+            "email": email,
+            "role": "user",
+            "created_at": dt,
+            "last_login": dt
+        }).execute()
+
+        role = "user"
+
+    if role == "admin":
+        pg = st.navigation({
+            "Home": [chat_page],
+            "Details": details,
+            "Admin panel": admin_panel
+        })
+    else:
+        pg = st.navigation({
+            "Home": [chat_page],
+            "Details": details,
+        })
+
 else:
     pg = st.navigation({
         "Home": [chat_page],
@@ -53,7 +92,7 @@ else:
 
 with st.sidebar:
     if logged_in:
-        st.success(f"✅ Logged in as **{st.user.email}**")
+        st.success(f"✅ Logged in as **{email}**")
         st.button("Log out", on_click=log_out, disabled=busy)
     else:
         st.info("👤 Guest mode: your conversation is not saved. Log in to keep your history.")
